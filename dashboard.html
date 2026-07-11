@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jury Dashboard — SAM Goals</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Lexend:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="dashboard-page">
+
+<div class="card card--dashboard" role="main">
+  <div class="dashboard-sticky-header">
+    <div class="dashboard-header">
+      <div class="brandblock">
+        <div class="wordmark">
+          <span class="eyebrow">Living by Design Nation</span>
+          <span class="title">Jury Dashboard</span>
+          <span class="subtitle">PERFORMANCE DATA</span>
+        </div>
+      </div>
+      <div class="dashboard-controls">
+        <div class="dashboard-greeting" id="user-greeting">Loading...</div>
+        <button id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle Theme">🌓 Auto</button>
+      </div>
+    </div>
+
+    <hr class="rule">
+  </div>
+
+  <div class="dashboard-content">
+
+    <!-- LEVEL 1: one card per organ -->
+    <div class="dash-view" id="organs-view">
+      <div class="organ-grid" id="organ-grid">
+        <div class="loader-wrap">
+          <div class="loader">
+            <div class="loader-logo-wrap"><img src="bck.png" alt="Loading..."></div>
+          </div>
+          <div class="loader-caption">Compiling secure data...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LEVEL 2: that organ's submissions, identified by Organ_Option -->
+    <div class="dash-view is-hidden" id="submissions-view">
+      <button type="button" class="btn-back" id="back-to-organs">← Back to Organs</button>
+      <h2 class="dash-view-title" id="submissions-organ-title"></h2>
+      <div class="submissions-list" id="submissions-list"></div>
+    </div>
+
+    <!-- LEVEL 3: one submission's full Question/Answer list -->
+    <div class="dash-view is-hidden" id="detail-view">
+      <button type="button" class="btn-back" id="back-to-submissions">← Back to Submissions</button>
+      <div class="detail-header" id="detail-header"></div>
+      <div class="qa-list" id="qa-list"></div>
+    </div>
+
+    </div>
+
+    <div class="actions" style="max-width: 250px; margin: 0 auto;">
+      <button type="button" class="btn btn-secondary" id="logout-btn">Secure Logout</button>
+    </div>
+  </div>
+</div>
+
+<script src="common.js"></script>
+<script src="js-dashboard.js"></script>
+</body>
+</html>

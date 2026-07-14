@@ -160,6 +160,16 @@ body::before{
   margin-top:2px;
 }
 
+.dashboard-welcome{
+  font-family:var(--font-sans);
+  font-size:12.5px;
+  font-weight:600;
+  letter-spacing:.02em;
+  color:var(--gold);
+  display:block;
+  margin-top:6px;
+}
+
 .liveclock{
   text-align:right;
   flex:none;
@@ -428,6 +438,30 @@ input[type="password"]:focus-visible{
   color:var(--ink-soft);
   margin-top:6px;
   min-height:14px;
+}
+
+.auth-switch{
+  text-align:center;
+  font-family:var(--font-sans);
+  font-size:12.5px;
+  color:var(--ink-soft);
+  margin-top:18px;
+}
+
+.link-btn{
+  background:none;
+  border:none;
+  padding:0;
+  color:var(--gold);
+  font-family:var(--font-sans);
+  font-size:12.5px;
+  font-weight:600;
+  cursor:pointer;
+  text-decoration:underline;
+}
+
+.link-btn:hover{
+  color:var(--gold-soft);
 }
 
 .field-hint.error{ color:var(--danger); }
@@ -711,6 +745,17 @@ textarea::placeholder{
   color:var(--ink);
   line-height:1.4;
   white-space:pre-wrap;
+}
+
+.summary-thanks{
+  margin-top:22px;
+  padding-top:18px;
+  border-top:1px solid var(--paper-edge);
+  text-align:center;
+  font-family:'Fraunces', serif;
+  font-size:15px;
+  font-weight:600;
+  color:var(--gold);
 }
 
 /* buttons */

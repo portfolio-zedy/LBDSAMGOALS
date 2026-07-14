@@ -189,7 +189,15 @@ function renderForm(questions) {
       }
     });
   });
-  
+
+  // Thank-you note after the last question, inside the same scrollable
+  // field list - visible as soon as they reach the end, not just after
+  // they submit.
+  const thanksEl = document.createElement('div');
+  thanksEl.className = 'summary-thanks';
+  thanksEl.textContent = `THANK YOU, FOR YOUR TIME LEADER '${submitterName ? submitterName.toUpperCase() : ''}'`;
+  container.appendChild(thanksEl);
+
   document.getElementById('submit-btn').disabled = false;
 
   // Now that the questions are in the DOM, start tracking scroll progress
@@ -258,120 +266,6 @@ function showResultsModal(answers) {
   document.getElementById('summary-container').innerHTML = buildSummaryHtml(answers);
   document.getElementById('results-modal').classList.remove('is-hidden');
 }
-
-// Renders the summary at its full natural height (not clipped by the
-// modal's scrollable viewport) before handing it to html2canvas, so the
-// exported PDF/JPEG always includes every row — not just whatever
-// happens to be scrolled into view on screen.
-async function captureSummaryCanvas() {
-  const scrollEl = document.querySelector('.modal-scroll');
-  const target = document.getElementById('summary-capture');
-
-  const prevOverflow = scrollEl.style.overflow;
-  const prevMaxHeight = scrollEl.style.maxHeight;
-  scrollEl.style.overflow = 'visible';
-  scrollEl.style.maxHeight = 'none';
-
-  // Force the browser to apply the style change above before capturing
-  void scrollEl.offsetHeight;
-
-  // Wait for web fonts to finish loading so the capture matches what's
-  // on screen instead of grabbing a mid-swap fallback-font layout
-  if (document.fonts && document.fonts.ready) {
-    try { await document.fonts.ready; } catch (err) { /* ignore */ }
-  }
-
-  const canvas = await html2canvas(target, {
-    scale: 2,
-    backgroundColor: '#FBF8F2',
-    onclone: (clonedDoc) => {
-      // html2canvas doesn't reliably resolve CSS custom properties
-      // (var(--ink), var(--gold), etc.) — text colored via a variable can
-      // render invisible even though it's there. Bake every element's
-      // already-computed color/background/border onto the clone so the
-      // capture never depends on variable resolution at all.
-      const clonedTarget = clonedDoc.getElementById('summary-capture');
-      if (!clonedTarget) return;
-
-      const bakeComputedColors = (originalEl, cloneEl) => {
-        const cs = window.getComputedStyle(originalEl);
-        cloneEl.style.color = cs.color;
-        cloneEl.style.backgroundColor = cs.backgroundColor;
-        cloneEl.style.borderColor = cs.borderColor;
-      };
-
-      bakeComputedColors(target, clonedTarget);
-      const originalEls = target.querySelectorAll('*');
-      const clonedEls = clonedTarget.querySelectorAll('*');
-      originalEls.forEach((originalEl, i) => {
-        if (clonedEls[i]) bakeComputedColors(originalEl, clonedEls[i]);
-      });
-    }
-  });
-
-  scrollEl.style.overflow = prevOverflow;
-  scrollEl.style.maxHeight = prevMaxHeight;
-
-  return canvas;
-}
-
-// Slices a (potentially very tall) canvas across as many standard A4
-// pages as needed, so long questionnaires export in full instead of
-// being squeezed onto one oversized page or having content cut off
-function buildPdfFromCanvas(canvas) {
-  const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: 'a4' });
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = pdf.internal.pageSize.getHeight();
-
-  const scaleRatio = pageWidth / canvas.width;
-  const sliceHeightPx = pageHeight / scaleRatio; // source pixels that fit one page
-
-  let renderedHeight = 0;
-  let firstPage = true;
-
-  while (renderedHeight < canvas.height) {
-    const thisSliceHeight = Math.min(sliceHeightPx, canvas.height - renderedHeight);
-
-    const sliceCanvas = document.createElement('canvas');
-    sliceCanvas.width = canvas.width;
-    sliceCanvas.height = thisSliceHeight;
-    sliceCanvas.getContext('2d').drawImage(
-      canvas,
-      0, renderedHeight, canvas.width, thisSliceHeight,
-      0, 0, canvas.width, thisSliceHeight
-    );
-
-    const imgData = sliceCanvas.toDataURL('image/jpeg', 0.95);
-    if (!firstPage) pdf.addPage();
-    pdf.addImage(imgData, 'JPEG', 0, 0, pageWidth, thisSliceHeight * scaleRatio);
-
-    renderedHeight += thisSliceHeight;
-    firstPage = false;
-  }
-
-  return pdf;
-}
-
-function downloadFileName(extension) {
-  const organPart = organName ? organName.replace(/\s+/g, '-') : 'SAM-Goals';
-  const namePart = submitterName ? '-' + submitterName.replace(/\s+/g, '-') : '';
-  return `${organPart}${namePart}-${new Date().toISOString().slice(0, 10)}.${extension}`;
-}
-
-document.getElementById('download-pdf-btn').addEventListener('click', async () => {
-  const canvas = await captureSummaryCanvas();
-  const pdf = buildPdfFromCanvas(canvas);
-  pdf.save(downloadFileName('pdf'));
-});
-
-document.getElementById('download-jpeg-btn').addEventListener('click', async () => {
-  const canvas = await captureSummaryCanvas();
-  const link = document.createElement('a');
-  link.download = downloadFileName('jpg');
-  link.href = canvas.toDataURL('image/jpeg', 0.95);
-  link.click();
-});
 
 document.getElementById('modal-close-btn').addEventListener('click', () => {
   window.location.href = 'index.html';

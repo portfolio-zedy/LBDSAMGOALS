@@ -13,10 +13,30 @@
   <div class="dashboard-sticky-header">
     <div class="dashboard-header">
       <div class="brandblock">
+        <svg class="seal" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-label="LBD Nation seal">
+          <circle cx="32" cy="32" r="30.5" stroke="#B8933E" stroke-width="1.2" fill="none"/>
+          <circle cx="32" cy="32" r="25" stroke="#B8933E" stroke-width="0.6" opacity="0.6" fill="none"/>
+          <defs>
+            <clipPath id="logoClip">
+              <circle cx="32" cy="32" r="21"/>
+            </clipPath>
+          </defs>
+          <image
+            href="bck.png"
+            x="11"
+            y="11"
+            width="42"
+            height="42"
+            clip-path="url(#logoClip)"
+            preserveAspectRatio="xMidYMid slice"
+          />
+        </svg>
+
         <div class="wordmark">
           <span class="eyebrow">Living by Design Nation</span>
           <span class="title">Jury Dashboard</span>
           <span class="subtitle">PERFORMANCE DATA</span>
+          <span class="dashboard-welcome" id="dashboard-welcome"></span>
         </div>
       </div>
       <div class="dashboard-controls">
@@ -30,8 +50,38 @@
 
   <div class="dashboard-content">
 
+    <!-- LANDING: the three top-level actions -->
+    <div class="dash-view" id="menu-view">
+      <div class="menu-grid">
+        <button type="button" class="menu-card" id="menu-create-rating">
+          <div>
+            <span class="menu-card-title">Create New Rating</span>
+            <span class="menu-card-desc">Score an organ's Prehosting attendance, review, and SAM Goal follow-through.</span>
+          </div>
+          <span class="menu-card-arrow">→</span>
+        </button>
+
+        <button type="button" class="menu-card" id="menu-previous-ratings">
+          <div>
+            <span class="menu-card-title">All Organ Ratings</span>
+            <span class="menu-card-desc">Browse ratings you've already submitted.</span>
+          </div>
+          <span class="menu-card-arrow">→</span>
+        </button>
+
+        <button type="button" class="menu-card" id="menu-organ-responses">
+          <div>
+            <span class="menu-card-title">Organ SAM Goal Responses</span>
+            <span class="menu-card-desc">Review each organ's monthly SAM Goals form submissions.</span>
+          </div>
+          <span class="menu-card-arrow">→</span>
+        </button>
+      </div>
+    </div>
+
     <!-- LEVEL 1: one card per organ -->
-    <div class="dash-view" id="organs-view">
+    <div class="dash-view is-hidden" id="organs-view">
+      <button type="button" class="btn-back" id="back-to-menu">← Back to Dashboard</button>
       <div class="organ-grid" id="organ-grid">
         <div class="loader-wrap">
           <div class="loader">
@@ -56,9 +106,7 @@
       <div class="qa-list" id="qa-list"></div>
     </div>
 
-    </div>
-
-    <div class="actions" style="max-width: 250px; margin: 0 auto;">
+    <div class="actions dashboard-logout-actions">
       <button type="button" class="btn btn-secondary" id="logout-btn">Secure Logout</button>
     </div>
   </div>

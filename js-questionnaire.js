@@ -195,7 +195,7 @@ function renderForm(questions) {
   // they submit.
   const thanksEl = document.createElement('div');
   thanksEl.className = 'summary-thanks';
-  thanksEl.textContent = `THANK YOU, FOR YOUR TIME LEADER '${submitterName ? submitterName.toUpperCase() : ''}'`;
+  thanksEl.textContent = `THANK YOU, FOR YOUR TIME LEADER ${submitterName ? submitterName.toUpperCase() : ''}`;
   container.appendChild(thanksEl);
 
   document.getElementById('submit-btn').disabled = false;
@@ -240,8 +240,8 @@ function getAnswerDisplay(q, answers) {
 function buildSummaryHtml(answers) {
   const rows = loadedQuestions.map(q => `
     <div class="summary-row">
-      <div class="summary-q">${q.Question_Text}</div>
-      <div class="summary-a">${getAnswerDisplay(q, answers)}</div>
+      <div class="summary-q">${escapeHtml(q.Question_Text)}</div>
+      <div class="summary-a">${escapeHtml(getAnswerDisplay(q, answers))}</div>
     </div>
   `).join('');
 
@@ -253,8 +253,8 @@ function buildSummaryHtml(answers) {
     <div id="summary-capture" class="summary-capture">
       <div class="summary-header">
         <div class="summary-eyebrow">Living by Design Nation</div>
-        <div class="summary-title">${organName ? organName.toUpperCase() : ''} SAM GOALS</div>
-        <div class="summary-sub">${submitterName ? 'Submitted by ' + submitterName.toUpperCase() : ''}${organOption ? ' · ' + organOption.toUpperCase() : ''}</div>
+        <div class="summary-title">${organName ? escapeHtml(organName.toUpperCase()) : ''} SAM GOALS</div>
+        <div class="summary-sub">${submitterName ? 'Submitted by ' + escapeHtml(submitterName.toUpperCase()) : ''}${organOption ? ' · ' + escapeHtml(organOption.toUpperCase()) : ''}</div>
         <div class="summary-date">${dateStr}</div>
       </div>
       <div class="summary-body">${rows}</div>

@@ -36,7 +36,10 @@
 
     <div class="field">
       <label>Password</label>
-      <input type="password" id="login-password" required placeholder="Enter your password">
+      <div class="password-wrap">
+        <input type="password" id="login-password" required placeholder="Enter your password">
+        <button type="button" class="toggle-password-btn" data-target="login-password" aria-label="Show password">👁</button>
+      </div>
       <div class="field-hint" id="login-hint">Please enter your assigned credentials.</div>
     </div>
 
@@ -47,6 +50,52 @@
       <div class="action-container">
         <button type="button" class="btn btn-secondary" onclick="window.location.href='index.html'">Return Home</button>
       </div>
+    </div>
+
+    <div class="auth-switch">
+      New juror? <button type="button" class="link-btn" id="show-signup-btn">Create an account</button>
+    </div>
+  </form>
+
+  <form id="signup-form" class="is-hidden" novalidate>
+    <div class="field">
+      <label>Full Name</label>
+      <input type="text" id="signup-fullname" required placeholder="Enter your full name">
+    </div>
+
+    <div class="field">
+      <label>Username</label>
+      <input type="text" id="signup-username" required placeholder="Choose a username to sign in with">
+    </div>
+
+    <div class="field">
+      <label>Password</label>
+      <div class="password-wrap">
+        <input type="password" id="signup-password" required placeholder="Choose a password you'll remember">
+        <button type="button" class="toggle-password-btn" data-target="signup-password" aria-label="Show password">👁</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="signup-role">Role</label>
+      <div class="select-wrap">
+        <select id="signup-role" required>
+          <option value="" selected disabled>Please select a role</option>
+          <option value="Juror">Juror</option>
+          <option value="Admin">Admin</option>
+        </select>
+      </div>
+      <div class="field-hint" id="signup-hint">New accounts are pending admin approval before you can log in.</div>
+    </div>
+
+    <div class="actions">
+      <div class="action-container">
+        <button type="submit" class="btn btn-primary" id="signup-btn">Create Account</button>
+      </div>
+    </div>
+
+    <div class="auth-switch">
+      Already have an account? <button type="button" class="link-btn" id="show-login-btn">Log in</button>
     </div>
   </form>
 </div>

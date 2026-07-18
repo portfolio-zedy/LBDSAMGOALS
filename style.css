@@ -170,6 +170,15 @@ body::before{
   margin-top:6px;
 }
 
+/* rating-form.html only — "Jury Report" sits tight under the report
+   title and matches the Welcome Juror line's gold, without changing
+   .subtitle's look on the other pages that share it */
+.jury-report-label{
+  margin-top:2px;
+  color:var(--gold);
+  font-weight:600;
+}
+
 .liveclock{
   text-align:right;
   flex:none;
@@ -281,6 +290,17 @@ hr.rule{
   margin-bottom:16px;
 }
 
+/* Same card treatment as .timeframe-block — a gold left-border panel —
+   for standalone fields that deserve to stand out more than a bare
+   label+input, like Rating Date at the top of Part 1. */
+.field--card{
+  background: var(--paper);
+  border: 1.5px solid var(--paper-edge);
+  border-left: 4px solid var(--gold);
+  border-radius: 12px;
+  padding: 16px 18px;
+}
+
 .field label{
   display:block;
   font-size:11px;
@@ -347,6 +367,80 @@ input[type="password"]:focus-visible{
   outline:none;
   border-color:var(--gold);
   box-shadow:0 0 0 3px rgba(184,147,62,0.18);
+}
+
+/* Date input — the native picker previously had no styling at all, so
+   it looked like a stray unstyled browser control next to everything
+   else on the rating form. This brings it in line with the text/
+   number/select fields: same paper background, rounded border, and
+   gold focus ring, plus a tinted calendar icon that brightens on hover. */
+input[type="date"]{
+  width:100%;
+  background:var(--paper);
+  border:1.5px solid var(--paper-edge);
+  border-radius:10px;
+  padding:13px 14px;
+  font-family:var(--font-sans);
+  font-size:14.5px;
+  font-weight:500;
+  color:var(--ink);
+  cursor:pointer;
+  transition:border-color .15s ease, box-shadow .15s ease;
+}
+
+input[type="date"]:focus-visible{
+  outline:none;
+  border-color:var(--gold);
+  box-shadow:0 0 0 3px rgba(184,147,62,0.18);
+}
+
+input[type="date"]:disabled{
+  color:var(--ink-soft);
+  cursor:wait;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator{
+  cursor:pointer;
+  opacity:.6;
+  transition:opacity .15s ease;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover{
+  opacity:1;
+}
+
+/* Password field with a show/hide toggle button overlaid on the right */
+.password-wrap{
+  position:relative;
+}
+
+.password-wrap input[type="password"],
+.password-wrap input[type="text"]{
+  padding-right:44px;
+}
+
+.toggle-password-btn{
+  position:absolute;
+  top:50%;
+  right:6px;
+  transform:translateY(-50%);
+  background:transparent;
+  border:none;
+  font-size:16px;
+  line-height:1;
+  padding:8px;
+  cursor:pointer;
+  color:var(--ink-soft);
+  transition:color .15s ease;
+}
+
+.toggle-password-btn:hover{
+  color:var(--gold);
+}
+
+.toggle-password-btn:focus-visible{
+  outline:none;
+  color:var(--gold);
 }
 
 /* Two selects sharing one question (e.g. "double-dropdown" Input_Type) */
@@ -770,6 +864,15 @@ textarea::placeholder{
   width: 100%;
 }
 
+/* Secure Logout at the bottom of the dashboard - previously an inline
+   `margin: 0 auto` accidentally zeroed out .actions' own margin-top,
+   leaving it flush against the content above instead of given room to
+   breathe. */
+.dashboard-logout-actions {
+  max-width: 250px;
+  margin: 40px auto 0;
+}
+
 button.btn{
   width:100%;
   border:none;
@@ -786,13 +889,13 @@ button.btn{
 button.btn:active{ transform:scale(.98); }
 
 .btn-primary{
-  background:var(--navy-deep);
+  background:linear-gradient(135deg, var(--navy-mid), var(--navy-deep));
   color:#FBF8F2;
   box-shadow:0 10px 20px -8px rgba(15,24,48,0.5);
 }
 [data-theme="dark"] .btn-primary {
   color: #161B22; 
-  background: #FBF8F2;
+  background: linear-gradient(135deg, #FBF8F2, var(--gold-soft));
 }
 .btn-primary:hover{ opacity: 0.9; }
 .btn-primary:disabled{
@@ -803,13 +906,13 @@ button.btn:active{ transform:scale(.98); }
 }
 
 .btn-secondary{
-  background:#9CA3AF;
+  background:linear-gradient(135deg, #9CA3AF, #7C8591);
   color:#FBF8F2;
   box-shadow:0 10px 20px -8px rgba(15,24,48,0.5);
 }
 .btn-secondary:hover{
   border-color:var(--gold);
-  background:#16213B;
+  background:linear-gradient(135deg, #1F2937, #16213B);
   color:var(--gold);
 }
 
@@ -959,18 +1062,26 @@ body.dashboard-page {
 .dash-view.is-hidden { display: none; }
 
 .btn-back {
-  background: transparent;
-  border: none;
+  background: linear-gradient(135deg, rgba(184,147,62,0.14), rgba(184,147,62,0.03));
+  border: 1.5px solid var(--paper-edge);
+  border-radius: 10px;
   color: var(--gold);
   font-family: var(--font-sans);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  padding: 0 0 16px 0;
+  padding: 9px 16px;
+  margin-bottom: 16px;
   display: inline-block;
+  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
 }
 
-.btn-back:hover { text-decoration: underline; }
+.btn-back:hover {
+  border-color: var(--gold);
+  background: linear-gradient(135deg, rgba(184,147,62,0.22), rgba(184,147,62,0.06));
+  box-shadow: 0 0 0 3px rgba(184,147,62,0.1);
+  text-decoration: none;
+}
 
 .dash-view-title {
   font-family: 'Fraunces', serif;
@@ -994,7 +1105,7 @@ body.dashboard-page {
   justify-content: center;
   aspect-ratio: 4 / 3;
   width: 100%;
-  background: var(--paper);
+  background: linear-gradient(160deg, var(--paper), var(--paper-edge));
   border: 1.5px solid var(--paper-edge);
   border-radius: 14px;
   padding: 18px;
@@ -1004,11 +1115,12 @@ body.dashboard-page {
   color: var(--ink);
   cursor: pointer;
   text-align: center;
-  transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+  transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease, background .15s ease;
 }
 
 .organ-card:hover {
   border-color: var(--gold);
+  background: linear-gradient(160deg, var(--paper), rgba(184,147,62,0.10));
   box-shadow: 0 0 0 3px rgba(184,147,62,0.12);
   transform: translateY(-1px);
 }
@@ -1035,18 +1147,19 @@ body.dashboard-page {
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  background: var(--paper);
+  background: linear-gradient(160deg, var(--paper), var(--paper-edge));
   border: 1.5px solid var(--paper-edge);
   border-radius: 10px;
   padding: 14px 16px;
   font-family: var(--font-sans);
   cursor: pointer;
   text-align: left;
-  transition: border-color .15s ease, box-shadow .15s ease;
+  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
 }
 
 .submission-item:hover {
   border-color: var(--gold);
+  background: linear-gradient(160deg, var(--paper), rgba(184,147,62,0.10));
   box-shadow: 0 0 0 3px rgba(184,147,62,0.12);
 }
 
@@ -1121,4 +1234,477 @@ body.dashboard-page {
   font-family: var(--font-sans);
   font-size: 13.5px;
   color: var(--ink-soft);
+}
+
+/* --------------------------------------------------------
+   DASHBOARD LANDING MENU (Create New Rating / Previous Organ
+   Ratings / Organ SAM Goal Responses)
+-------------------------------------------------------- */
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.menu-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 140px;
+  background: linear-gradient(160deg, var(--paper), var(--paper-edge));
+  border: 1.5px solid var(--paper-edge);
+  border-radius: 14px;
+  padding: 20px;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease, background .15s ease;
+}
+
+.menu-card:hover {
+  border-color: var(--gold);
+  background: linear-gradient(160deg, var(--paper), rgba(184,147,62,0.10));
+  box-shadow: 0 0 0 3px rgba(184,147,62,0.12);
+  transform: translateY(-1px);
+}
+
+.menu-card-title {
+  display: block;
+  font-family: 'Fraunces', serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.menu-card-desc {
+  display: block;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  margin-top: 6px;
+  line-height: 1.45;
+}
+
+.menu-card-arrow {
+  align-self: flex-end;
+  color: var(--gold);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.menu-card-badge {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  font-family: var(--font-sans);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--gold);
+  background: rgba(184,147,62,0.12);
+  padding: 3px 8px;
+  border-radius: 20px;
+}
+
+/* --------------------------------------------------------
+   RATING FORM HEADER — brand block left, "ORGAN RATINGS"
+   centered across the header, theme toggle right
+-------------------------------------------------------- */
+.dashboard-header--rating {
+  position: relative;
+}
+
+.header-center-title {
+  font-family: 'Fraunces', serif;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--gold);
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .dashboard-header--rating {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .header-center-title {
+    position: static;
+    transform: none;
+  }
+}
+
+/* --------------------------------------------------------
+   RATING FORM BODY — Part 1 heading + organ/section repeater
+-------------------------------------------------------- */
+.rating-part {
+  margin-bottom: 8px;
+}
+
+.rating-part-eyebrow {
+  display: block;
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 4px;
+}
+
+.rating-part-title {
+  font-family: 'Fraunces', serif;
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0 0 18px 0;
+}
+
+.organ-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.organ-row .select-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.btn-remove-row {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1.5px solid var(--paper-edge);
+  background: linear-gradient(160deg, var(--paper), var(--paper-edge));
+  color: var(--ink-soft);
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color .15s ease, color .15s ease;
+}
+
+.btn-remove-row:hover:not(:disabled) {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.btn-remove-row:disabled {
+  opacity: .35;
+  cursor: not-allowed;
+}
+
+.btn-add-organ {
+  display: block;
+  width: 100%;
+  background: linear-gradient(135deg, rgba(184,147,62,0.08), rgba(184,147,62,0.02));
+  border: 1.5px dashed var(--paper-edge);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gold);
+  cursor: pointer;
+  margin-top: 2px;
+  transition: border-color .15s ease, background .15s ease;
+}
+
+.btn-add-organ:hover {
+  border-color: var(--gold);
+  background: linear-gradient(135deg, rgba(184,147,62,0.16), rgba(184,147,62,0.05));
+}
+
+@media (max-width: 420px) {
+  .organ-row {
+    flex-wrap: wrap;
+  }
+  .organ-row .select-wrap {
+    flex: 1 1 100%;
+  }
+}
+
+/* --------------------------------------------------------
+   RATING BLOCK — one independent block per organ/option row,
+   holding Attendance / Prehosting Review / SAM Goal / Remark
+-------------------------------------------------------- */
+#rating-blocks {
+  margin-top: 8px;
+}
+
+.rating-block {
+  background: var(--paper);
+  border: 1.5px solid var(--paper-edge);
+  border-left: 4px solid var(--gold);
+  border-radius: 12px;
+  padding: 18px 18px 4px;
+  margin-bottom: 18px;
+}
+
+.rating-block-title {
+  font-family: 'Fraunces', serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0 0 16px 0;
+}
+
+.rating-inline-row {
+  display: flex;
+  gap: 14px;
+}
+
+.rating-inline-row .field {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 460px) {
+  .rating-inline-row {
+    flex-direction: column;
+    gap: 0;
+  }
+}
+
+.rating-scale-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rating-scale-wrap input[type="number"] {
+  width: 90px;
+  flex: none;
+}
+
+.rating-scale-suffix {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+.samgoal-ref-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: rgba(184,147,62,0.08);
+  border: 1px solid var(--paper-edge);
+  border-radius: 10px;
+  padding: 11px 13px;
+  margin-top: 8px;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  color: var(--ink);
+}
+
+.samgoal-ref-preview .ref-actions {
+  display: flex;
+  gap: 12px;
+  flex: none;
+}
+
+.samgoal-ref-preview button {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gold);
+  text-decoration: underline;
+}
+
+.samgoal-ref-preview button:hover {
+  color: var(--gold-soft);
+}
+
+.rb-attach-ref-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-top: 6px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gold);
+  text-decoration: underline;
+}
+
+.rb-attach-ref-btn:hover {
+  color: var(--gold-soft);
+}
+
+.samgoal-auto-zero {
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  margin-top: 8px;
+  line-height: 1.5;
+}
+
+.rating-block textarea {
+  resize: vertical;
+}
+
+/* --------------------------------------------------------
+   PART 2 — PRAYER BELT REPORT: fixed time-frame blocks,
+   each gated by its own Present/Absent checkbox
+-------------------------------------------------------- */
+.prayer-belt-part {
+  margin-top: 8px;
+}
+
+.timeframe-block {
+  background: var(--paper);
+  border: 1.5px solid var(--paper-edge);
+  border-left: 4px solid var(--gold);
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin-bottom: 16px;
+}
+
+.timeframe-header {
+  display: flex;
+  align-items: center;
+}
+
+.timeframe-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.timeframe-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--gold);
+  cursor: pointer;
+}
+
+.timeframe-label {
+  font-family: 'Fraunces', serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.timeframe-body {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--paper-edge);
+}
+
+.tribe-row {
+  margin-bottom: 14px;
+}
+
+.tribe-row-main {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.tribe-row-main .select-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.tribe-attendance-field {
+  margin-top: 8px;
+  max-width: 240px;
+}
+
+.timeframe-total-field {
+  margin-top: 14px;
+  max-width: 160px;
+}
+
+.prayer-remark-field {
+  margin-top: 4px;
+}
+
+/* --------------------------------------------------------
+   Divider between Part 1 / 2 / 3
+-------------------------------------------------------- */
+.part-divider {
+  margin: 32px 0;
+}
+
+/* --------------------------------------------------------
+   PART 3 — HOSTING BETHEL REPORT: three /10 ratings side by
+   side (wrapping responsively) plus one overall remark
+-------------------------------------------------------- */
+.hosting-bethel-part {
+  margin-top: 8px;
+}
+
+.hosting-bethel-ratings-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.hosting-bethel-ratings-row .field {
+  flex: 1 1 160px;
+  min-width: 140px;
+}
+
+.modal-title {
+  font-family: 'Fraunces', serif;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0 0 16px 0;
+}
+
+/* --------------------------------------------------------
+   PREVIOUS ORGAN RATINGS — read-only rating blocks reuse
+   .rating-block/.rating-block-title, but .qa-row needs its
+   own (borderless, tighter) treatment outside of .qa-list
+-------------------------------------------------------- */
+.rating-block .qa-row {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin-bottom: 12px;
+}
+
+.rating-block .qa-row:last-child {
+  margin-bottom: 0;
+}
+
+.rb-view-ref-link {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-left: 8px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gold);
+  text-decoration: underline;
+}
+
+.rb-view-ref-link:hover {
+  color: var(--gold-soft);
 }

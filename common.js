@@ -8,6 +8,22 @@
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwSSOUccNOeSRtoEwhvTqZL8ODG6w8J1sCL7Sej0_yAQdocrq6jXknLwyY2fqH9Wk_d/exec";
 
 /* ---------------------------------------------------------
+   SHARED HTML ESCAPING
+   Every page that injects sheet data (organ names, submitter
+   names, questionnaire answers, etc.) into innerHTML MUST run
+   it through this first - anything from a Google Sheet is
+   attacker-controlled, since index.html lets anyone submit a
+   name and free-text answers with no login required.
+   Single copy here instead of one per page script, so no page
+   can accidentally skip it.
+--------------------------------------------------------- */
+function escapeHtml(str) {
+  return String(str == null ? '' : str).replace(/[&<>"']/g, ch => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[ch]));
+}
+
+/* ---------------------------------------------------------
    LIVE DATE & TIME (ticking seconds)
    Shared by index.html and questionnaire.html
 --------------------------------------------------------- */

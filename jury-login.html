@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jury Login — SAM Goals</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="card" role="main">
+  <div class="card-header">
+    <div class="brandblock">
+      <svg class="seal" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="32" r="30.5" stroke="#B8933E" stroke-width="1.2" fill="none"/>
+        <circle cx="32" cy="32" r="25" stroke="#B8933E" stroke-width="0.6" opacity="0.6" fill="none"/>
+        <defs><clipPath id="logoClip"><circle cx="32" cy="32" r="21"/></clipPath></defs>
+        <image href="bck.png" x="11" y="11" width="42" height="42" clip-path="url(#logoClip)" preserveAspectRatio="xMidYMid slice"/>
+      </svg>
+      <div class="wordmark">
+        <span class="eyebrow">Secure Portal</span>
+        <span class="title">Jury Access</span>
+        <span class="subtitle">AUTHENTICATION REQUIRED</span>
+      </div>
+    </div>
+  </div>
+
+  <hr class="rule">
+
+  <form id="login-form" novalidate>
+    <div class="field">
+      <label>Username</label>
+      <input type="text" id="login-username" required placeholder="Enter your username">
+    </div>
+
+    <div class="field">
+      <label>Password</label>
+      <div class="password-wrap">
+        <input type="password" id="login-password" required placeholder="Enter your password">
+        <button type="button" class="toggle-password-btn" data-target="login-password" aria-label="Show password">👁</button>
+      </div>
+      <div class="field-hint" id="login-hint">Please enter your assigned credentials.</div>
+    </div>
+
+    <div class="actions">
+      <div class="action-container">
+        <button type="submit" class="btn btn-primary" id="login-btn">Authenticate</button>
+      </div>
+      <div class="action-container">
+        <button type="button" class="btn btn-secondary" onclick="window.location.href='index.html'">Return Home</button>
+      </div>
+    </div>
+
+    <div class="auth-switch">
+      New juror? <button type="button" class="link-btn" id="show-signup-btn">Create an account</button>
+    </div>
+  </form>
+
+  <form id="signup-form" class="is-hidden" novalidate>
+    <div class="field">
+      <label>Full Name</label>
+      <input type="text" id="signup-fullname" required placeholder="Enter your full name">
+    </div>
+
+    <div class="field">
+      <label>Username</label>
+      <input type="text" id="signup-username" required placeholder="Choose a username to sign in with">
+    </div>
+
+    <div class="field">
+      <label>Password</label>
+      <div class="password-wrap">
+        <input type="password" id="signup-password" required placeholder="Choose a password you'll remember">
+        <button type="button" class="toggle-password-btn" data-target="signup-password" aria-label="Show password">👁</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="signup-role">Role</label>
+      <div class="select-wrap">
+        <select id="signup-role" required>
+          <option value="" selected disabled>Please select a role</option>
+          <option value="Juror">Juror</option>
+          <option value="Admin">Admin</option>
+        </select>
+      </div>
+      <div class="field-hint" id="signup-hint">New accounts are pending admin approval before you can log in.</div>
+    </div>
+
+    <div class="actions">
+      <div class="action-container">
+        <button type="submit" class="btn btn-primary" id="signup-btn">Create Account</button>
+      </div>
+    </div>
+
+    <div class="auth-switch">
+      Already have an account? <button type="button" class="link-btn" id="show-login-btn">Log in</button>
+    </div>
+  </form>
+</div>
+
+<script src="common.js"></script>
+<script src="js-login.js"></script>
+</body>
+</html>

@@ -1,0 +1,1710 @@
+:root{
+  --ink:#1B2233;
+  --ink-soft:#5B6270;
+  --paper:#FBF8F2;
+  --paper-edge:#EFE9DC;
+  --navy-deep:#0F1830;
+  --navy-mid:#1C2C4F;
+  --gold:#B8933E;
+  --gold-soft:#D8BE7E;
+  --live:#3E8F63;
+  --danger:#B4543B;
+  --radius:18px;
+  /* System-font stack: renders as real San Francisco on Mac/iOS,
+     Segoe UI on Windows, Roboto on Android — no font files hosted,
+     so there's no licensing concern. Inter is the web fallback. */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Dark Mode Variables */
+[data-theme="dark"] {
+  --ink: #FBF8F2;
+  --ink-soft: #A0AABF;
+  --paper: #161B22; 
+  --paper-edge: #30363D;
+  --navy-deep: #0D1117;
+  --navy-mid: #1F2937;
+}
+
+*{ box-sizing:border-box; }
+
+html,body{ height:100%; }
+
+.is-hidden{ display:none !important; }
+
+
+/* Smooth cross-fade when the theme flips between day/night instead of a hard cut */
+body,
+.card,
+select,
+button.btn,
+.theme-toggle-btn{
+  transition: background-color .35s ease, color .35s ease, border-color .35s ease, box-shadow .35s ease;
+}
+
+body{
+  margin:0;
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:32px 16px;
+  font-family:var(--font-sans);
+  color:var(--ink);
+  
+  /* The Background Stack: Gradients on top, bck.png on the bottom */
+  background:
+    radial-gradient(circle at 50% 15%, rgba(184,147,62,0.15), transparent 55%),
+    radial-gradient(circle at 85% 85%, rgba(184,147,62,0.10), transparent 50%),
+    linear-gradient(160deg, rgba(15, 24, 48, 0.85) 0%, rgba(28, 44, 79, 0.85) 55%, rgba(22, 34, 62, 0.9) 100%),
+    url('bck.png') center/cover fixed no-repeat;
+    
+  position:relative;
+  overflow-x:hidden;
+}
+
+/* faint concentric seal watermark on the page background */
+body::before{
+  content:"";
+  position:fixed;
+  top:50%; left:50%;
+  width:1100px; height:1100px;
+  transform:translate(-50%,-50%);
+  border-radius:50%;
+  border:1px solid rgba(216,190,126,0.06);
+  box-shadow:
+    0 0 0 60px rgba(216,190,126,0.03),
+    0 0 0 120px rgba(216,190,126,0.02);
+  pointer-events:none;
+}
+
+.card{
+  position:relative;
+  width:100%;
+  max-width:420px;
+  background:var(--paper);
+  border-radius:var(--radius);
+  padding:32px 28px 28px;
+  box-shadow:
+    0 30px 60px -20px rgba(6,10,22,0.55),
+    0 0 0 1px rgba(184,147,62,0.15);
+  animation:rise .6s cubic-bezier(.2,.8,.2,1) both;
+}
+
+@keyframes rise{
+  from{ opacity:0; transform:translateY(18px); }
+  to{ opacity:1; transform:translateY(0); }
+}
+
+.card::before{
+  content:"";
+  position:absolute;
+  top:0; left:24px; right:24px;
+  height:3px;
+  background:linear-gradient(90deg, transparent, var(--gold) 20%, var(--gold-soft) 50%, var(--gold) 80%, transparent);
+  border-radius:0 0 3px 3px;
+}
+
+/* header row: logo + live clock */
+.card-header{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:22px;
+  flex:none; /* never shrink or grow — stays pinned at its natural size */
+}
+
+.seal{
+  width:64px;
+  height:64px;
+  flex:none;
+}
+
+.brandblock{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
+.wordmark{
+  line-height:1.05;
+}
+
+.wordmark .eyebrow{
+  font-family:var(--font-sans);
+  font-size:10px;
+  font-weight:600;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  color:var(--gold);
+  display:block;
+  margin-bottom:2px;
+}
+
+.wordmark .title{
+  font-family:'Fraunces', serif;
+  font-size:19px;
+  font-weight:600;
+  color:var(--ink);
+  display:block;
+}
+
+.wordmark .subtitle{
+  font-family:var(--font-sans);
+  font-size:11px;
+  font-weight:500;
+  letter-spacing:.04em;
+  color:var(--ink-soft);
+  display:block;
+  margin-top:2px;
+}
+
+.dashboard-welcome{
+  font-family:var(--font-sans);
+  font-size:12.5px;
+  font-weight:600;
+  letter-spacing:.02em;
+  color:var(--gold);
+  display:block;
+  margin-top:6px;
+}
+
+/* rating-form.html only — "Jury Report" sits tight under the report
+   title and matches the Welcome Juror line's gold, without changing
+   .subtitle's look on the other pages that share it */
+.jury-report-label{
+  margin-top:2px;
+  color:var(--gold);
+  font-weight:600;
+}
+
+.liveclock{
+  text-align:right;
+  flex:none;
+  padding-top:2px;
+}
+
+.liveclock .date{
+  font-family:'Lexend', sans-serif;
+  font-size:11px;
+  font-weight:600;
+  color:var(--ink-soft);
+  white-space:nowrap;
+}
+
+.liveclock .time{
+  font-family:'Lexend', sans-serif;
+  font-size:16px;
+  font-weight:700;
+  color:var(--ink);
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:6px;
+  margin-top:2px;
+}
+
+.liveclock .dot{
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  background:var(--live);
+  box-shadow:0 0 0 0 rgba(62,143,99,.6);
+  animation:pulse 1.6s infinite;
+}
+
+@keyframes pulse{
+  0%{ box-shadow:0 0 0 0 rgba(62,143,99,.55); }
+  70%{ box-shadow:0 0 0 6px rgba(62,143,99,0); }
+  100%{ box-shadow:0 0 0 0 rgba(62,143,99,0); }
+}
+
+.liveclock .seconds{
+  color:var(--gold);
+}
+
+/* Theme Toggle Button Styles */
+.theme-toggle-btn {
+  background: transparent;
+  border: 1px solid var(--paper-edge);
+  border-radius: 12px;
+  padding: 4px 8px;
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  cursor: pointer;
+  margin-top: 8px;
+  transition: all 0.2s ease;
+}
+
+.theme-toggle-btn:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+hr.rule{
+  border:none;
+  border-top:1px solid var(--paper-edge);
+  margin:20px 0;
+  flex:none;
+}
+
+/* Submitter's name banner — shown above the progress bar on the
+   questionnaire page, uppercased in JS to match this styling */
+.submitter-name{
+  font-family:var(--font-sans);
+  font-size:11px;
+  font-weight:600;
+  letter-spacing:.12em;
+  color:var(--gold);
+  text-align:left;
+  margin-bottom:14px;
+  flex-shrink:0;
+}
+
+/* Scroll progress bar — sits between the header and the question
+   list, fills as the user scrolls through the fields-grid. It's a
+   flex:none sibling of the form, so it never scrolls away either. */
+.progress-wrap{
+  width:100%;
+  height:5px;
+  background:var(--paper-edge);
+  border-radius:3px;
+  overflow:hidden;
+  margin-bottom:20px;
+  flex:none;
+}
+
+.progress-bar{
+  height:100%;
+  width:0%;
+  background:linear-gradient(90deg, var(--gold), var(--gold-soft));
+  border-radius:3px;
+  transition:width .2s ease;
+}
+
+/* form */
+.field{
+  margin-bottom:16px;
+}
+
+/* Same card treatment as .timeframe-block — a gold left-border panel —
+   for standalone fields that deserve to stand out more than a bare
+   label+input, like Rating Date at the top of Part 1. */
+.field--card{
+  background: var(--paper);
+  border: 1.5px solid var(--paper-edge);
+  border-left: 4px solid var(--gold);
+  border-radius: 12px;
+  padding: 16px 18px;
+}
+
+.field label{
+  display:block;
+  font-size:11px;
+  font-weight:600;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  color:var(--ink-soft);
+  margin-bottom:7px;
+}
+
+.select-wrap{
+  position:relative;
+}
+
+select{
+  width:100%;
+  appearance:none;
+  -webkit-appearance:none;
+  background:var(--paper);
+  border:1.5px solid var(--paper-edge);
+  border-radius:10px;
+  padding:13px 40px 13px 14px;
+  font-family:var(--font-sans);
+  font-size:14.5px;
+  font-weight:500;
+  color:var(--ink);
+  cursor:pointer;
+  transition:border-color .15s ease, box-shadow .15s ease;
+}
+
+select:focus-visible{
+  outline:none;
+  border-color:var(--gold);
+  box-shadow:0 0 0 3px rgba(184,147,62,0.18);
+}
+
+select:disabled{
+  color:var(--ink-soft);
+  cursor:wait;
+}
+
+/* Text/number/password inputs — mirrors the select styling above.
+   The original file only styled <select>; the questionnaire's
+   dynamic fields (and the login password field) need
+   input[type=text/number/password] to match. */
+input[type="text"],
+input[type="number"],
+input[type="password"]{
+  width:100%;
+  background:var(--paper);
+  border:1.5px solid var(--paper-edge);
+  border-radius:10px;
+  padding:13px 14px;
+  font-family:var(--font-sans);
+  font-size:14.5px;
+  font-weight:500;
+  color:var(--ink);
+  transition:border-color .15s ease, box-shadow .15s ease;
+}
+
+input[type="text"]:focus-visible,
+input[type="number"]:focus-visible,
+input[type="password"]:focus-visible{
+  outline:none;
+  border-color:var(--gold);
+  box-shadow:0 0 0 3px rgba(184,147,62,0.18);
+}
+
+/* Date input — the native picker previously had no styling at all, so
+   it looked like a stray unstyled browser control next to everything
+   else on the rating form. This brings it in line with the text/
+   number/select fields: same paper background, rounded border, and
+   gold focus ring, plus a tinted calendar icon that brightens on hover. */
+input[type="date"]{
+  width:100%;
+  background:var(--paper);
+  border:1.5px solid var(--paper-edge);
+  border-radius:10px;
+  padding:13px 14px;
+  font-family:var(--font-sans);
+  font-size:14.5px;
+  font-weight:500;
+  color:var(--ink);
+  cursor:pointer;
+  transition:border-color .15s ease, box-shadow .15s ease;
+}
+
+input[type="date"]:focus-visible{
+  outline:none;
+  border-color:var(--gold);
+  box-shadow:0 0 0 3px rgba(184,147,62,0.18);
+}
+
+input[type="date"]:disabled{
+  color:var(--ink-soft);
+  cursor:wait;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator{
+  cursor:pointer;
+  opacity:.6;
+  transition:opacity .15s ease;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover{
+  opacity:1;
+}
+
+/* Password field with a show/hide toggle button overlaid on the right */
+.password-wrap{
+  position:relative;
+}
+
+.password-wrap input[type="password"],
+.password-wrap input[type="text"]{
+  padding-right:44px;
+}
+
+.toggle-password-btn{
+  position:absolute;
+  top:50%;
+  right:6px;
+  transform:translateY(-50%);
+  background:transparent;
+  border:none;
+  font-size:16px;
+  line-height:1;
+  padding:8px;
+  cursor:pointer;
+  color:var(--ink-soft);
+  transition:color .15s ease;
+}
+
+.toggle-password-btn:hover{
+  color:var(--gold);
+}
+
+.toggle-password-btn:focus-visible{
+  outline:none;
+  color:var(--gold);
+}
+
+/* Two selects sharing one question (e.g. "double-dropdown" Input_Type) */
+.double-select-wrap{
+  display:flex;
+  gap:10px;
+}
+
+.double-select-wrap select{
+  flex:1;
+  min-width:0; /* lets selects shrink below their content width on narrow phones */
+}
+
+@media (max-width:360px){
+  .double-select-wrap{
+    flex-direction:column;
+  }
+}
+
+/* One dropdown + one free-text field sharing a question
+   (e.g. "dropdown-text" Input_Type) */
+.dropdown-text-wrap{
+  display:flex;
+  gap:10px;
+}
+
+.dropdown-text-wrap select{
+  flex:1 1 auto;
+  min-width:0;
+}
+
+.dropdown-text-wrap input[type="text"],
+.dropdown-text-wrap input[type="number"]{
+  flex:0 0 auto;
+  width:auto; /* overrides the global input width:100% so `size` can take effect */
+  min-width:0;
+}
+
+@media (max-width:360px){
+  .dropdown-text-wrap{
+    flex-direction:column;
+  }
+}
+
+/* Two dropdown+textbox pairs stacked for one question
+   (e.g. "double-dropdown-text" Input_Type) */
+.double-dropdown-text-wrap{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+/* Each dropdown + its own long-answer textarea, stacked vertically
+   so the answer box gets the full field width instead of squeezing
+   next to the dropdown (used by "double-dropdown-text" Input_Type) */
+.dropdown-textarea-wrap{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+/* Dynamic questionnaire selects aren't wrapped in .select-wrap,
+   so give them their own arrow via a background gradient. */
+.fields-grid select{
+  appearance:none;
+  -webkit-appearance:none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--ink-soft) 50%),
+    linear-gradient(135deg, var(--ink-soft) 50%, transparent 50%);
+  background-position: calc(100% - 20px) center, calc(100% - 15px) center;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+
+.select-wrap::after{
+  content:"";
+  position:absolute;
+  right:15px;
+  top:50%;
+  width:9px; height:9px;
+  border-right:2px solid var(--ink-soft);
+  border-bottom:2px solid var(--ink-soft);
+  transform:translateY(-65%) rotate(45deg);
+  pointer-events:none;
+}
+
+.field-hint{
+  font-size:11.5px;
+  color:var(--ink-soft);
+  margin-top:6px;
+  min-height:14px;
+}
+
+.auth-switch{
+  text-align:center;
+  font-family:var(--font-sans);
+  font-size:12.5px;
+  color:var(--ink-soft);
+  margin-top:18px;
+}
+
+.link-btn{
+  background:none;
+  border:none;
+  padding:0;
+  color:var(--gold);
+  font-family:var(--font-sans);
+  font-size:12.5px;
+  font-weight:600;
+  cursor:pointer;
+  text-decoration:underline;
+}
+
+.link-btn:hover{
+  color:var(--gold-soft);
+}
+
+.field-hint.error{ color:var(--danger); }
+.field-hint.ok{ color:var(--live); }
+
+/* ---------------------------------------------------------
+   QUESTIONNAIRE FORM LAYOUT (mobile-first)
+   Base styles below target small screens first; the card widens
+   as viewport space grows, but each question always stays on
+   its own line — single column at every breakpoint.
+--------------------------------------------------------- */
+.card--form{
+  display: flex;
+  flex-direction: column;
+  /* Locks the card to the screen size minus some breathing room */
+  max-height: calc(100vh - 40px);
+  max-width:420px; /* same as base card on phones */
+}
+
+/* Forces the form to fill the card but hide overflowing content.
+   overflow:hidden here (rather than a bare flex:1) is what lets the
+   form shrink below its content's natural height — per the flex spec,
+   a flex item's automatic minimum size is 0 once overflow isn't visible. */
+#questionnaire-form {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex: 1;
+}
+
+/* Prevents the header, divider, progress bar, footnote, and submit
+   buttons from ever being shrunk by the flex layout — only the
+   question list below is allowed to compress and scroll */
+.card-header,
+hr.rule,
+.submitter-name,
+.progress-wrap,
+.actions,
+.footnote {
+  flex-shrink: 0;
+}
+
+/* Creates the internal scrolling area just for the questions */
+.fields-grid{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:4px 20px;
+  overflow-y: auto; /* This turns on the scrollbar */
+  padding-right: 8px; /* Adds space so text doesn't touch the scrollbar */
+  flex: 1;
+  margin-bottom: 4px;
+}
+
+/* Custom elegant scrollbar styling */
+.fields-grid::-webkit-scrollbar {
+  width: 5px;
+}
+.fields-grid::-webkit-scrollbar-track {
+  background: transparent;
+}
+.fields-grid::-webkit-scrollbar-thumb {
+  background: var(--paper-edge);
+  border-radius: 10px;
+}
+[data-theme="dark"] .fields-grid::-webkit-scrollbar-thumb {
+  background: rgba(160, 170, 191, 0.3); /* Matches dark theme */
+}
+
+.fields-grid .field,
+.fields-grid p{
+  margin-bottom:18px;
+}
+
+.fields-grid .error{
+  color:var(--danger);
+  font-size:13px;
+}
+
+/* Small tablets and up: the form gets noticeably roomier,
+   still one question per line */
+@media (min-width:640px){
+  .card--form{ max-width:640px; }
+}
+
+/* Larger tablets/desktop: give the form even more breathing room */
+@media (min-width:900px){
+  .card--form{ max-width:720px; padding:40px 48px 36px; }
+}
+
+/* Auto-growing textarea used for free-text answers */
+textarea{
+  width:100%;
+  display:block;
+  background:var(--paper);
+  border:1.5px solid var(--paper-edge);
+  border-radius:10px;
+  padding:13px 14px;
+  font-family:var(--font-sans);
+  font-size:14.5px;
+  font-weight:500;
+  color:var(--ink);
+  resize:none;
+  overflow:hidden;
+  min-height:52px;
+  line-height:1.45;
+  transition:border-color .15s ease, box-shadow .15s ease, height .08s ease;
+}
+
+textarea:focus-visible{
+  outline:none;
+  border-color:var(--gold);
+  box-shadow:0 0 0 3px rgba(184,147,62,0.18);
+}
+
+textarea::placeholder{
+  color:var(--ink-soft);
+  opacity:.7;
+}
+
+/* ---------------------------------------------------------
+   LOADING SPINNER — logo seal wrapped in a spinning blue ring,
+   shown while the questionnaire fetches from the database
+--------------------------------------------------------- */
+.loader-wrap{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:36px 0 28px;
+}
+
+.loader{
+  position:relative;
+  width:96px;
+  height:96px;
+}
+
+.loader::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:50%;
+  background:conic-gradient(from 0deg, transparent 0deg, #2E6BE6 250deg, #6FA1FF 320deg, transparent 360deg);
+  animation:loader-spin 1s linear infinite;
+  -webkit-mask:radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px));
+  mask:radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px));
+}
+
+.loader-logo-wrap{
+  position:absolute;
+  inset:10px;
+  border-radius:50%;
+  overflow:hidden;
+  background:var(--paper);
+  box-shadow:0 0 0 1px rgba(184,147,62,0.25);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.loader-logo-wrap img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+
+.loader-caption{
+  margin-top:16px;
+  font-size:12.5px;
+  font-weight:500;
+  color:var(--ink-soft);
+  letter-spacing:.03em;
+}
+
+@keyframes loader-spin{
+  to{ transform:rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .loader::before{ animation:none; border:3px solid #2E6BE6; }
+}
+
+/* ---------------------------------------------------------
+   RESULTS MODAL — shown after a successful submit, lets the
+   person download their own answers as a PDF or JPEG
+--------------------------------------------------------- */
+.modal-overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(15,24,48,0.55);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  z-index:1000;
+}
+
+.modal-card{
+  background:var(--paper);
+  border-radius:var(--radius);
+  width:100%;
+  max-width:480px;
+  max-height:88vh;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  box-shadow:
+    0 30px 60px -20px rgba(6,10,22,0.55),
+    0 0 0 1px rgba(184,147,62,0.15);
+}
+
+.modal-scroll{
+  overflow-y:auto;
+  flex:1;
+  min-height:0;
+  padding:26px 24px 8px;
+}
+
+.modal-actions{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  padding:16px 24px 24px;
+  flex-shrink:0;
+}
+
+.summary-header{
+  text-align:center;
+  margin-bottom:18px;
+  padding-bottom:14px;
+  border-bottom:1px solid var(--paper-edge);
+}
+
+.summary-eyebrow{
+  font-family:var(--font-sans);
+  font-size:10px;
+  font-weight:600;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  color:var(--gold);
+  margin-bottom:4px;
+}
+
+.summary-title{
+  font-family:'Fraunces', serif;
+  font-size:20px;
+  font-weight:600;
+  color:var(--ink);
+}
+
+.summary-sub{
+  font-family:var(--font-sans);
+  font-size:11.5px;
+  font-weight:600;
+  letter-spacing:.06em;
+  color:var(--ink-soft);
+  margin-top:4px;
+}
+
+.summary-date{
+  font-family:var(--font-sans);
+  font-size:11px;
+  color:var(--ink-soft);
+  margin-top:2px;
+}
+
+.summary-row{
+  margin-bottom:14px;
+}
+
+.summary-q{
+  font-size:11px;
+  font-weight:600;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+  color:var(--ink-soft);
+  margin-bottom:4px;
+}
+
+.summary-a{
+  font-size:14px;
+  color:var(--ink);
+  line-height:1.4;
+  white-space:pre-wrap;
+}
+
+.summary-thanks{
+  margin-top:22px;
+  padding-top:18px;
+  border-top:1px solid var(--paper-edge);
+  text-align:center;
+  font-family:'Fraunces', serif;
+  font-size:15px;
+  font-weight:600;
+  color:var(--gold);
+}
+
+/* buttons */
+.actions{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  margin-top:22px;
+}
+
+.action-container {
+  width: 100%;
+}
+
+/* Secure Logout at the bottom of the dashboard - previously an inline
+   `margin: 0 auto` accidentally zeroed out .actions' own margin-top,
+   leaving it flush against the content above instead of given room to
+   breathe. */
+.dashboard-logout-actions {
+  max-width: 250px;
+  margin: 40px auto 0;
+}
+
+button.btn{
+  width:100%;
+  border:none;
+  border-radius:10px;
+  padding:14px 16px;
+  font-family:var(--font-sans);
+  font-size:14.5px;
+  font-weight:600;
+  letter-spacing:.01em;
+  cursor:pointer;
+  transition:transform .12s ease, box-shadow .12s ease, background .15s ease, color .15s ease;
+}
+
+button.btn:active{ transform:scale(.98); }
+
+.btn-primary{
+  background:linear-gradient(135deg, var(--navy-mid), var(--navy-deep));
+  color:#FBF8F2;
+  box-shadow:0 10px 20px -8px rgba(15,24,48,0.5);
+}
+[data-theme="dark"] .btn-primary {
+  color: #161B22; 
+  background: linear-gradient(135deg, #FBF8F2, var(--gold-soft));
+}
+.btn-primary:hover{ opacity: 0.9; }
+.btn-primary:disabled{
+  background:#9CA3AF;
+  box-shadow:none;
+  cursor:not-allowed;
+  color:#E5E7EB;
+}
+
+.btn-secondary{
+  background:linear-gradient(135deg, #9CA3AF, #7C8591);
+  color:#FBF8F2;
+  box-shadow:0 10px 20px -8px rgba(15,24,48,0.5);
+}
+.btn-secondary:hover{
+  border-color:var(--gold);
+  background:linear-gradient(135deg, #1F2937, #16213B);
+  color:var(--gold);
+}
+
+.footnote{
+  text-align:center;
+  font-size:10.5px;
+  color:var(--ink-soft);
+  margin-top:18px;
+  letter-spacing:.03em;
+  flex:none;
+}
+
+@media (max-width:400px){
+  .card{ padding:26px 20px 22px; }
+  .wordmark .title{ font-size:17px; }
+  .seal{ width:54px; height:54px; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .card{ animation:none; }
+  .liveclock .dot{ animation:none; }
+  body, .card, select, button.btn, .theme-toggle-btn{ transition:none; }
+}
+
+/* ---------------------------------------------------------
+   DASHBOARD SPECIFIC STYLES 
+--------------------------------------------------------- */
+/* --------------------------------------------------------
+   DASHBOARD SPECIFIC STYLES
+   Full page layout instead of a floating card over the
+   background artwork, with the header pinned to the top.
+-------------------------------------------------------- */
+body.dashboard-page {
+  display: block;
+  align-items: initial;
+  justify-content: initial;
+  padding: 0;
+  background: var(--paper);
+}
+
+.dashboard-page .card--dashboard {
+  max-width: none;
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
+  animation: none;
+}
+
+.dashboard-page .card--dashboard::before {
+  display: none;
+}
+
+.dashboard-sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--paper);
+  padding: 24px 32px 0;
+}
+
+.dashboard-content {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 32px 40px;
+}
+
+#dashboard-views {
+  margin-bottom: 28px;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.dashboard-controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.dashboard-greeting {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+
+.dashboard-greeting strong {
+  color: var(--gold);
+}
+
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  background: var(--paper);
+  border: 1.5px solid var(--paper-edge);
+  border-radius: 10px;
+  margin-bottom: 24px;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-family: var(--font-sans);
+  font-size: 13px;
+}
+
+.data-table th, .data-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--paper-edge);
+  white-space: nowrap;
+}
+
+.data-table th {
+  background: rgba(184, 147, 62, 0.08);
+  color: var(--ink);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 11px;
+}
+
+.data-table tr:last-child td {
+  border-bottom: none;
+}
+
+.data-table tbody tr:hover {
+  background: rgba(184, 147, 62, 0.04);
+}
+
+.empty-state {
+  padding: 40px;
+  text-align: center;
+  color: var(--ink-soft);
+  font-style: italic;
+}
+
+/* --------------------------------------------------------
+   DASHBOARD DRILL-DOWN (organ cards -> submissions -> Q&A)
+-------------------------------------------------------- */
+.dash-view.is-hidden { display: none; }
+
+.btn-back {
+  background: linear-gradient(135deg, rgba(184,147,62,0.14), rgba(184,147,62,0.03));
+  border: 1.5px solid var(--paper-edge);
+  border-radius: 10px;
+  color: var(--gold);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 9px 16px;
+  margin-bottom: 16px;
+  display: inline-block;
+  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+
+.btn-back:hover {
+  border-color: var(--gold);
+  background: linear-gradient(135deg, rgba(184,147,62,0.22), rgba(184,147,62,0.06));
+  box-shadow: 0 0 0 3px rgba(184,147,62,0.1);
+  text-decoration: none;
+}
+
+.dash-view-title {
+  font-family: 'Fraunces', serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0 0 16px 0;
+}
+
+/* Level 1: organ cards — fixed 4:3 (width:height) tiles */
+.organ-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.organ-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 4 / 3;
+  width: 100%;
+  background: linear-gradient(160deg, var(--paper), var(--paper-edge));
+  border: 1.5px solid var(--paper-edge);
+  border-radius: 14px;
+  padding: 18px;
+  font-family: 'Fraunces', serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease, background .15s ease;
+}
+
+.organ-card:hover {
+  border-color: var(--gold);
+  background: linear-gradient(160deg, var(--paper), rgba(184,147,62,0.10));
+  box-shadow: 0 0 0 3px rgba(184,147,62,0.12);
+  transform: translateY(-1px);
+}
+
+.organ-card-arrow {
+  position: absolute;
+  bottom: 12px;
+  right: 14px;
+  color: var(--gold);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* Level 2: submissions list, identified by Organ_Option */
+.submissions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.submission-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: linear-gradient(160deg, var(--paper), var(--paper-edge));
+  border: 1.5px solid var(--paper-edge);
+  border-radius: 10px;
+  padding: 14px 16px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+
+.submission-item:hover {
+  border-color: var(--gold);
+  background: linear-gradient(160deg, var(--paper), rgba(184,147,62,0.10));
+  box-shadow: 0 0 0 3px rgba(184,147,62,0.12);
+}
+
+.submission-identifier {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--ink);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.submission-meta {
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+/* Level 3: Question/Answer detail */
+.detail-header {
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--paper-edge);
+}
+
+.detail-organ {
+  font-family: 'Fraunces', serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ink);
+  text-transform: uppercase;
+}
+
+.detail-meta {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--ink-soft);
+  margin-top: 4px;
+}
+
+.qa-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.qa-row {
+  display: flex;
+  gap: 14px;
+  background: var(--paper);
+  border: 1.5px solid var(--paper-edge);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.qa-num {
+  flex: none;
+  font-family: 'Lexend', sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--gold);
+  min-width: 28px;
+}
+
+.qa-question {
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+
+.qa-answer {
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  color: var(--ink-soft);
+}
+
+/* --------------------------------------------------------
+   DASHBOARD LANDING MENU (Create New Rating / Previous Organ
+   Ratings / Organ SAM Goal Responses)
+-------------------------------------------------------- */
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.menu-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 140px;
+  background: linear-gradient(160deg, var(--paper), var(--paper-edge));
+  border: 1.5px solid var(--paper-edge);
+  border-radius: 14px;
+  padding: 20px;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease, background .15s ease;
+}
+
+.menu-card:hover {
+  border-color: var(--gold);
+  background: linear-gradient(160deg, var(--paper), rgba(184,147,62,0.10));
+  box-shadow: 0 0 0 3px rgba(184,147,62,0.12);
+  transform: translateY(-1px);
+}
+
+.menu-card-title {
+  display: block;
+  font-family: 'Fraunces', serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.menu-card-desc {
+  display: block;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  margin-top: 6px;
+  line-height: 1.45;
+}
+
+.menu-card-arrow {
+  align-self: flex-end;
+  color: var(--gold);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.menu-card-badge {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  font-family: var(--font-sans);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--gold);
+  background: rgba(184,147,62,0.12);
+  padding: 3px 8px;
+  border-radius: 20px;
+}
+
+/* --------------------------------------------------------
+   RATING FORM HEADER — brand block left, "ORGAN RATINGS"
+   centered across the header, theme toggle right
+-------------------------------------------------------- */
+.dashboard-header--rating {
+  position: relative;
+}
+
+.header-center-title {
+  font-family: 'Fraunces', serif;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--gold);
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .dashboard-header--rating {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .header-center-title {
+    position: static;
+    transform: none;
+  }
+}
+
+/* --------------------------------------------------------
+   RATING FORM BODY — Part 1 heading + organ/section repeater
+-------------------------------------------------------- */
+.rating-part {
+  margin-bottom: 8px;
+}
+
+.rating-part-eyebrow {
+  display: block;
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 4px;
+}
+
+.rating-part-title {
+  font-family: 'Fraunces', serif;
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0 0 18px 0;
+}
+
+.organ-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.organ-row .select-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.btn-remove-row {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1.5px solid var(--paper-edge);
+  background: linear-gradient(160deg, var(--paper), var(--paper-edge));
+  color: var(--ink-soft);
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color .15s ease, color .15s ease;
+}
+
+.btn-remove-row:hover:not(:disabled) {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.btn-remove-row:disabled {
+  opacity: .35;
+  cursor: not-allowed;
+}
+
+.btn-add-organ {
+  display: block;
+  width: 100%;
+  background: linear-gradient(135deg, rgba(184,147,62,0.08), rgba(184,147,62,0.02));
+  border: 1.5px dashed var(--paper-edge);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gold);
+  cursor: pointer;
+  margin-top: 2px;
+  transition: border-color .15s ease, background .15s ease;
+}
+
+.btn-add-organ:hover {
+  border-color: var(--gold);
+  background: linear-gradient(135deg, rgba(184,147,62,0.16), rgba(184,147,62,0.05));
+}
+
+@media (max-width: 420px) {
+  .organ-row {
+    flex-wrap: wrap;
+  }
+  .organ-row .select-wrap {
+    flex: 1 1 100%;
+  }
+}
+
+/* --------------------------------------------------------
+   RATING BLOCK — one independent block per organ/option row,
+   holding Attendance / Prehosting Review / SAM Goal / Remark
+-------------------------------------------------------- */
+#rating-blocks {
+  margin-top: 8px;
+}
+
+.rating-block {
+  background: var(--paper);
+  border: 1.5px solid var(--paper-edge);
+  border-left: 4px solid var(--gold);
+  border-radius: 12px;
+  padding: 18px 18px 4px;
+  margin-bottom: 18px;
+}
+
+.rating-block-title {
+  font-family: 'Fraunces', serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0 0 16px 0;
+}
+
+.rating-inline-row {
+  display: flex;
+  gap: 14px;
+}
+
+.rating-inline-row .field {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 460px) {
+  .rating-inline-row {
+    flex-direction: column;
+    gap: 0;
+  }
+}
+
+.rating-scale-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rating-scale-wrap input[type="number"] {
+  width: 90px;
+  flex: none;
+}
+
+.rating-scale-suffix {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+.samgoal-ref-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: rgba(184,147,62,0.08);
+  border: 1px solid var(--paper-edge);
+  border-radius: 10px;
+  padding: 11px 13px;
+  margin-top: 8px;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  color: var(--ink);
+}
+
+.samgoal-ref-preview .ref-actions {
+  display: flex;
+  gap: 12px;
+  flex: none;
+}
+
+.samgoal-ref-preview button {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gold);
+  text-decoration: underline;
+}
+
+.samgoal-ref-preview button:hover {
+  color: var(--gold-soft);
+}
+
+.rb-attach-ref-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-top: 6px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gold);
+  text-decoration: underline;
+}
+
+.rb-attach-ref-btn:hover {
+  color: var(--gold-soft);
+}
+
+.samgoal-auto-zero {
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  margin-top: 8px;
+  line-height: 1.5;
+}
+
+.rating-block textarea {
+  resize: vertical;
+}
+
+/* --------------------------------------------------------
+   PART 2 — PRAYER BELT REPORT: fixed time-frame blocks,
+   each gated by its own Present/Absent checkbox
+-------------------------------------------------------- */
+.prayer-belt-part {
+  margin-top: 8px;
+}
+
+.timeframe-block {
+  background: var(--paper);
+  border: 1.5px solid var(--paper-edge);
+  border-left: 4px solid var(--gold);
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin-bottom: 16px;
+}
+
+.timeframe-header {
+  display: flex;
+  align-items: center;
+}
+
+.timeframe-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.timeframe-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--gold);
+  cursor: pointer;
+}
+
+.timeframe-label {
+  font-family: 'Fraunces', serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.timeframe-body {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--paper-edge);
+}
+
+.tribe-row {
+  margin-bottom: 14px;
+}
+
+.tribe-row-main {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.tribe-row-main .select-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.tribe-attendance-field {
+  margin-top: 8px;
+  max-width: 240px;
+}
+
+.timeframe-total-field {
+  margin-top: 14px;
+  max-width: 160px;
+}
+
+.prayer-remark-field {
+  margin-top: 4px;
+}
+
+/* --------------------------------------------------------
+   Divider between Part 1 / 2 / 3
+-------------------------------------------------------- */
+.part-divider {
+  margin: 32px 0;
+}
+
+/* --------------------------------------------------------
+   PART 3 — HOSTING BETHEL REPORT: three /10 ratings side by
+   side (wrapping responsively) plus one overall remark
+-------------------------------------------------------- */
+.hosting-bethel-part {
+  margin-top: 8px;
+}
+
+.hosting-bethel-ratings-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.hosting-bethel-ratings-row .field {
+  flex: 1 1 160px;
+  min-width: 140px;
+}
+
+.modal-title {
+  font-family: 'Fraunces', serif;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0 0 16px 0;
+}
+
+/* --------------------------------------------------------
+   PREVIOUS ORGAN RATINGS — read-only rating blocks reuse
+   .rating-block/.rating-block-title, but .qa-row needs its
+   own (borderless, tighter) treatment outside of .qa-list
+-------------------------------------------------------- */
+.rating-block .qa-row {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin-bottom: 12px;
+}
+
+.rating-block .qa-row:last-child {
+  margin-bottom: 0;
+}
+
+.rb-view-ref-link {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-left: 8px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gold);
+  text-decoration: underline;
+}
+
+.rb-view-ref-link:hover {
+  color: var(--gold-soft);
+}

@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Previous Ratings — SAM Goals</title>
+<link rel="icon" type="image/png" href="bck.png">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Lexend:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -49,21 +50,36 @@
 
   <div class="dashboard-content">
 
-    <!-- LEVEL 1: every rating session this juror has submitted, each
-         one showing its own organ/section breakdown directly - no
-         intermediate report-type picker, since there's only ever been
-         one report type in practice. -->
-    <div class="dash-view" id="sessions-view">
+    <!-- LEVEL 1: report type cards -->
+    <div class="dash-view" id="report-types-view">
       <button type="button" class="btn-back" id="back-to-menu">← Back to Dashboard</button>
-      <h2 class="dash-view-title" id="sessions-report-title">Your Rating Sessions</h2>
+      <div class="organ-grid" id="report-types-grid">
+        <div class="loader-wrap">
+          <div class="loader">
+            <div class="loader-logo-wrap"><img src="bck.png" alt="Loading..."></div>
+          </div>
+          <div class="loader-caption">Loading your ratings…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LEVEL 2: sessions for one report type, identified by date -->
+    <div class="dash-view is-hidden" id="sessions-view">
+      <button type="button" class="btn-back" id="back-to-report-types">← Back to Report Types</button>
+      <h2 class="dash-view-title" id="sessions-report-title"></h2>
       <div class="submissions-list" id="sessions-list"></div>
     </div>
 
-    <!-- LEVEL 2: one session's full set of rating blocks -->
+    <!-- LEVEL 3: one session's full set of rating blocks -->
     <div class="dash-view is-hidden" id="session-detail-view">
-      <button type="button" class="btn-back" id="back-to-sessions">← Back to Sessions</button>
-      <div class="detail-header" id="session-detail-header"></div>
-      <div id="session-detail-blocks"></div>
+      <div class="detail-actions-row">
+        <button type="button" class="btn-back" id="back-to-sessions">← Back to Sessions</button>
+        <button type="button" class="btn btn-secondary btn-download-pdf" id="download-pdf-btn">⬇ Download PDF</button>
+      </div>
+      <div id="session-detail-printable">
+        <div class="detail-header" id="session-detail-header"></div>
+        <div id="session-detail-blocks"></div>
+      </div>
     </div>
 
   </div>
@@ -84,6 +100,8 @@
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="common.js"></script>
 <script src="js-previous-ratings.js"></script>
 </body>

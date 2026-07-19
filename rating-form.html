@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Organ Ratings — SAM Goals</title>
+<link rel="icon" type="image/png" href="bck.png">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Lexend:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="dashboard-page">
+
+<div class="card card--dashboard" role="main">
+  <div class="dashboard-sticky-header">
+    <div class="dashboard-header">
+      <div class="brandblock">
+        <svg class="seal" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-label="LBD Nation seal">
+          <circle cx="32" cy="32" r="30.5" stroke="#B8933E" stroke-width="1.2" fill="none"/>
+          <circle cx="32" cy="32" r="25" stroke="#B8933E" stroke-width="0.6" opacity="0.6" fill="none"/>
+          <defs>
+            <clipPath id="logoClip">
+              <circle cx="32" cy="32" r="21"/>
+            </clipPath>
+          </defs>
+          <image
+            href="bck.png"
+            x="11"
+            y="11"
+            width="42"
+            height="42"
+            clip-path="url(#logoClip)"
+            preserveAspectRatio="xMidYMid slice"
+          />
+        </svg>
+
+        <div class="wordmark">
+          <span class="eyebrow">Living by Design Nation</span>
+          <span class="title" id="report-title">Loading…</span>
+          <span class="subtitle jury-report-label">Jury Report</span>
+          <span class="dashboard-welcome" id="dashboard-welcome"></span>
+        </div>
+      </div>
+
+      <div class="dashboard-controls">
+        <button id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle Theme">🌓 Auto</button>
+      </div>
+    </div>
+
+    <hr class="rule">
+  </div>
+
+  <div class="dashboard-content">
+    <button type="button" class="btn-back" id="back-to-menu">← Back to Dashboard</button>
+
+    <form id="rating-form" novalidate>
+
+      <section class="rating-part">
+        <span class="rating-part-eyebrow">Part 1</span>
+        <h2 class="rating-part-title" id="part1-title">Loading…</h2>
+
+        <div class="field field--card">
+          <label for="rating-date">Rating Date</label>
+          <input type="date" id="rating-date" required disabled>
+          <div class="field-hint" id="date-hint">Loading organ registry…</div>
+        </div>
+
+        <div class="field is-hidden" id="organ-rows-field">
+          <label>Organs &amp; Sections</label>
+          <div id="organ-rows"></div>
+          <button type="button" class="btn-add-organ" id="add-organ-btn">+ Add Organ</button>
+          <div class="field-hint" id="organ-rows-hint"></div>
+        </div>
+      </section>
+
+      <!-- Rating blocks (Attendance / Prehosting Review / SAM Goal / Remark)
+           land here in the next phase, one per organ/option row above. -->
+      <section class="rating-blocks is-hidden" id="rating-blocks"></section>
+
+      <hr class="rule part-divider">
+
+      <!-- PART 2 — Prayer Belt Report. Phase 1: static shell only —
+           the "+ Add Tribe" dropdown gets wired to the Tribe organ's
+           real Options in Phase 2, and none of this affects Submit
+           until Phase 3 wires it into saveRating. -->
+      <section class="rating-part prayer-belt-part">
+        <span class="rating-part-eyebrow">Part 2</span>
+        <h2 class="rating-part-title">Prayer Belt Report</h2>
+
+        <div id="prayer-timeframes"></div>
+
+        <div class="field prayer-remark-field">
+          <label>Remark</label>
+          <textarea class="prayer-remark" rows="2" placeholder="Was all prayer belts covered and on time?"></textarea>
+        </div>
+      </section>
+
+      <hr class="rule part-divider">
+
+      <!-- PART 3 — Hosting Bethel Report: one set of three /10 ratings
+           plus an overall remark, per session (not per organ or time
+           frame), saved to RES_RATINGS as its own Section. -->
+      <section class="rating-part hosting-bethel-part">
+        <span class="rating-part-eyebrow">Part 3</span>
+        <h2 class="rating-part-title">Hosting Bethel Report</h2>
+
+        <h3 class="rating-block-title">Rating</h3>
+
+        <div class="hosting-bethel-ratings-row">
+          <div class="field">
+            <label>First Timers (FT)</label>
+            <div class="rating-scale-wrap">
+              <input type="number" min="0" max="10" id="hb-ft-input" placeholder="0">
+              <span class="rating-scale-suffix">/ 10</span>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Smooth Transition (ST)</label>
+            <div class="rating-scale-wrap">
+              <input type="number" min="0" max="10" id="hb-st-input" placeholder="0">
+              <span class="rating-scale-suffix">/ 10</span>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Leaders Defence (LD)</label>
+            <div class="rating-scale-wrap">
+              <input type="number" min="0" max="10" id="hb-ld-input" placeholder="0">
+              <span class="rating-scale-suffix">/ 10</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Overall Remark</label>
+          <textarea id="hb-remark-input" rows="2" placeholder="Any overall remarks…"></textarea>
+        </div>
+      </section>
+
+      <div class="actions">
+        <div class="action-container">
+          <button type="submit" class="btn btn-primary" id="submit-rating-btn" disabled>Submit Ratings</button>
+        </div>
+        <div class="field-hint" id="submit-hint"></div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Attach SAM Goal Ref — pulled from that organ+option's own SAM Goals
+     submissions via the existing getOrganSubmissions action -->
+<div class="modal-overlay is-hidden" id="samref-modal">
+  <div class="modal-card">
+    <div class="modal-scroll">
+      <h3 class="modal-title" id="samref-modal-title">Attach SAM Goal Ref</h3>
+      <div class="submissions-list" id="samref-list"></div>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-secondary" id="samref-cancel-btn">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- View — read-only preview of the attached submission's full Q&A,
+     via the existing getSubmissionDetail action -->
+<div class="modal-overlay is-hidden" id="samref-detail-modal">
+  <div class="modal-card">
+    <div class="modal-scroll">
+      <div class="detail-header" id="samref-detail-header"></div>
+      <div class="qa-list" id="samref-detail-qa-list"></div>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-secondary" id="samref-detail-close-btn">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Shown once saveRating succeeds -->
+<div class="modal-overlay is-hidden" id="rating-success-modal">
+  <div class="modal-card">
+    <div class="modal-scroll">
+      <h3 class="modal-title">Ratings Saved</h3>
+      <p id="rating-success-body" style="font-family:var(--font-sans); font-size:14px; color:var(--ink-soft); line-height:1.5;"></p>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-primary" id="rating-success-done-btn">Done</button>
+    </div>
+  </div>
+</div>
+
+<script src="common.js"></script>
+<script src="js-rating-form.js"></script>
+</body>
+</html>

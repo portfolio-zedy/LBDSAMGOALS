@@ -1,0 +1,23 @@
+{
+  "name": "LBD Nation SAM Goals",
+  "short_name": "SAM Goals",
+  "description": "Living by Design Nation — SAM Goals Jury Portal",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0F1830",
+  "theme_color": "#B8933E",
+  "icons": [
+    {
+      "src": "bck.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "bck.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

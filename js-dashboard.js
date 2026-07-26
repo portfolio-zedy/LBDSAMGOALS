@@ -239,12 +239,13 @@ function renderUsersList(users) {
     return;
   }
 
-  // Pending users first, so the people who actually need action from
-  // this screen aren't buried under a long list of already-active ones.
+  // Anyone who isn't Active needs a decision from this screen - a fresh
+  // signup or a previously-revoked user alike - so both sort above the
+  // already-active rows instead of just brand-new signups.
   const sorted = users.slice().sort((a, b) => {
-    const aPending = a.status === 'Not Approved' ? 0 : 1;
-    const bPending = b.status === 'Not Approved' ? 0 : 1;
-    return aPending - bPending;
+    const aNeedsAction = a.status === 'Active' ? 1 : 0;
+    const bNeedsAction = b.status === 'Active' ? 1 : 0;
+    return aNeedsAction - bNeedsAction;
   });
 
   usersList.innerHTML = sorted.map(u => renderUserRow(u)).join('');
@@ -253,6 +254,9 @@ function renderUsersList(users) {
     btn.addEventListener('click', () => handleUserDecision(btn, 'approve'));
   });
   usersList.querySelectorAll('.user-reject-btn').forEach(btn => {
+    btn.addEventListener('click', () => handleUserDecision(btn, 'reject'));
+  });
+  usersList.querySelectorAll('.user-revoke-btn').forEach(btn => {
     btn.addEventListener('click', () => handleUserDecision(btn, 'reject'));
   });
   usersList.querySelectorAll('.user-view-ratings-btn').forEach(btn => {
@@ -264,45 +268,58 @@ function renderUsersList(users) {
 }
 
 function renderUserRow(u) {
-  const isPending = u.status === 'Not Approved';
+  // 'Not Approved' (a fresh signup) and 'Rejected' (a declined signup OR
+  // a previously-Active user whose access was revoked - both share this
+  // one status by design) get the same organ-picker "approve" control,
+  // since re-activating either one is the same call to the backend.
+  const needsDecision = u.status !== 'Active';
 
   let statusHtml;
-  if (isPending) {
+  if (needsDecision) {
     const organOptionsHtml = (organNamesForAssignment || [])
       .map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`)
       .join('');
 
+    // A brand-new signup can still be turned away with Reject; a
+    // Rejected row is already at that end state, so there's nothing
+    // left to reject and the button is skipped for it.
+    const rejectBtnHtml = u.status === 'Not Approved'
+      ? `<button type="button" class="btn-user-reject user-reject-btn">Reject</button>`
+      : '';
+
+    // Rejected carries its own small badge here (Not Approved doesn't
+    // need one - the decision row already makes its state obvious) so
+    // it's visible at a glance even while the reinstate control sits
+    // right next to it.
+    const rejectedBadgeHtml = u.status === 'Rejected'
+      ? `<span class="status-badge status-badge--rejected">Rejected</span>`
+      : '';
+
     statusHtml = `
       <div class="user-decision-row">
+        ${rejectedBadgeHtml}
         <select class="user-organ-select">
           <option value="" selected disabled>Assign organ…</option>
           <option value="All">All</option>
           ${organOptionsHtml}
         </select>
-        <button type="button" class="btn-user-approve user-approve-btn">Approve</button>
-        <button type="button" class="btn-user-reject user-reject-btn">Reject</button>
+        <button type="button" class="btn-user-approve user-approve-btn">${u.status === 'Rejected' ? 'Reinstate' : 'Approve'}</button>
+        ${rejectBtnHtml}
       </div>
     `;
   } else {
-    const badgeClass = u.status === 'Active' ? 'status-badge--active' : 'status-badge--rejected';
     const organSuffix = u.assignedOrgan ? ` · ${escapeHtml(u.assignedOrgan)}` : '';
-    // Only an Active user can have logged in and submitted anything, so
-    // the "View Ratings" button only makes sense next to that badge -
-    // a Rejected or (already covered above) Not Approved row never has
-    // ratings to show.
-    const viewRatingsBtn = u.status === 'Active'
-      ? `<button type="button" class="btn-view-ratings user-view-ratings-btn">View Ratings</button>`
-      : '';
     statusHtml = `
       <div class="user-status-row">
-        <span class="status-badge ${badgeClass}">${escapeHtml(u.status)}${organSuffix}</span>
-        ${viewRatingsBtn}
+        <span class="status-badge status-badge--active">Active${organSuffix}</span>
+        <button type="button" class="btn-view-ratings user-view-ratings-btn">View Ratings</button>
+        <button type="button" class="btn-user-reject user-revoke-btn">Revoke</button>
       </div>
     `;
   }
 
   return `
-    <div class="submission-item user-row" data-username="${escapeHtml(u.username)}" data-fullname="${escapeHtml(u.fullName)}" style="cursor:default;">
+    <div class="submission-item user-row" data-username="${escapeHtml(u.username)}" data-fullname="${escapeHtml(u.fullName)}" data-status="${escapeHtml(u.status)}" style="cursor:default;">
       <div class="user-row-info">
         <span class="submission-identifier">${escapeHtml(u.fullName)}</span>
         <span class="submission-meta">@${escapeHtml(u.username)} · ${escapeHtml(u.role)}</span>
@@ -315,6 +332,8 @@ function renderUserRow(u) {
 async function handleUserDecision(btn, decision) {
   const row = btn.closest('.user-row');
   const username = row.dataset.username;
+  const fullName = row.dataset.fullname;
+  const wasActive = row.dataset.status === 'Active';
 
   let assignedOrgan = '';
   if (decision === 'approve') {
@@ -326,20 +345,28 @@ async function handleUserDecision(btn, decision) {
     }
   }
 
-  if (decision === 'reject' && !confirm(`Reject ${username}? They will not be able to log in.`)) {
-    return;
+  if (decision === 'reject') {
+    // Same backend call either way, but the confirmation should say what
+    // it will actually feel like to the person clicking it - revoking an
+    // active user's access reads very differently than declining a
+    // pending signup, even though both just set Status to 'Rejected'.
+    const confirmMsg = wasActive
+      ? `Revoke access for ${fullName || username}? They will not be able to log in until reinstated.`
+      : `Reject ${fullName || username}? They will not be able to log in.`;
+    if (!confirm(confirmMsg)) return;
   }
 
+  const originalLabel = btn.textContent;
   row.querySelectorAll('button').forEach(b => b.disabled = true);
-  btn.textContent = decision === 'approve' ? 'Approving…' : 'Rejecting…';
+  btn.textContent = 'Working…';
 
   try {
     await callBackend('updateUserStatus', { username, decision, assignedOrgan });
     loadUsers();
   } catch (err) {
-    alert(`Failed to ${decision} this user: ${err.message}`);
+    alert(`Failed to update this user: ${err.message}`);
     row.querySelectorAll('button').forEach(b => b.disabled = false);
-    btn.textContent = decision === 'approve' ? 'Approve' : 'Reject';
+    btn.textContent = originalLabel;
   }
 }
 

@@ -63,6 +63,195 @@ async function callBackend(action, payload) {
 }
 
 // -----------------------------------------------------------
+// RATING FORM DRAFT PERSISTENCE
+// Every user interaction is snapshotted into sessionStorage so a
+// reload or accidental back-navigation never loses filled-in work.
+// The draft is keyed to this report type so different report types
+// never bleed into each other.
+// -----------------------------------------------------------
+const RATING_DRAFT_KEY = `lbd_rating_draft__${reportType}`;
+
+function saveRatingDraft() {
+  try {
+    // Collect organ rows
+    const organRowsSnap = rows.map(r => ({
+      organName:   r.organName,
+      organOption: r.organOption
+    }));
+
+    // Collect rating block data
+    const blockDataSnap = rows.map(r => r.data ? { ...r.data, samGoalRef: r.data.samGoalRef || null } : null);
+
+    // Collect prayer belt state
+    const prayerSnap = Array.from(document.querySelectorAll('.timeframe-block')).map(block => {
+      const tf      = block.dataset.timeframe;
+      const present = block.querySelector('.tf-present-checkbox').checked;
+      const total   = block.querySelector('.tf-total').value;
+      const tribes  = Array.from(block.querySelectorAll('.tribe-row')).map(row => ({
+        tribeName:  (row.querySelector('.tribe-row-select') || {}).value || '',
+        attendance: (row.querySelector('.tribe-attendance-input') || {}).value || ''
+      })).filter(t => t.tribeName);
+      return { tf, present, total, tribes };
+    });
+
+    // Collect hosting bethel
+    const hbSnap = {
+      ft:     (document.getElementById('hb-ft-input')     || {}).value || '',
+      st:     (document.getElementById('hb-st-input')     || {}).value || '',
+      ld:     (document.getElementById('hb-ld-input')     || {}).value || '',
+      remark: (document.getElementById('hb-remark-input') || {}).value || ''
+    };
+
+    sessionStorage.setItem(RATING_DRAFT_KEY, JSON.stringify({
+      date:       (document.getElementById('rating-date') || {}).value || '',
+      organRows:  organRowsSnap,
+      blockData:  blockDataSnap,
+      prayer:     prayerSnap,
+      hb:         hbSnap,
+      prayerRemark: (document.querySelector('.prayer-remark') || {}).value || ''
+    }));
+  } catch (_) { /* storage full — silent */ }
+}
+
+function loadRatingDraft() {
+  try {
+    const raw = sessionStorage.getItem(RATING_DRAFT_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (_) { return null; }
+}
+
+function clearRatingDraft() {
+  try { sessionStorage.removeItem(RATING_DRAFT_KEY); } catch (_) {}
+}
+
+// Called once organs are loaded — restores the full draft state into
+// the DOM. Runs AFTER organsData is populated so dropdowns can be built.
+function restoreRatingDraft() {
+  const draft = loadRatingDraft();
+  if (!draft) return;
+
+  // Restore date
+  const dateEl = document.getElementById('rating-date');
+  if (draft.date && dateEl) {
+    dateEl.value = draft.date;
+    // Reveal organ rows field
+    organRowsField.classList.remove('is-hidden');
+  }
+
+  // Restore organ rows
+  if (Array.isArray(draft.organRows) && draft.organRows.length) {
+    // Remove the default empty row that addOrganRow() auto-added
+    while (rows.length) {
+      const r = rows[0];
+      if (r.organSelect && r.organSelect.closest('.organ-row')) {
+        r.organSelect.closest('.organ-row').remove();
+      }
+      if (r.blockEl) r.blockEl.remove();
+      rows.splice(0, 1);
+    }
+
+    draft.organRows.forEach((snap, i) => {
+      addOrganRow();
+      const row = rows[rows.length - 1];
+
+      if (snap.organName) {
+        row.organSelect.value = snap.organName;
+        row.organName         = snap.organName;
+        populateRowOptions(row);
+      }
+      if (snap.organOption) {
+        row.optionSelect.value = snap.organOption;
+        row.organOption        = snap.organOption;
+      }
+
+      // Restore block data for this row
+      const bd = draft.blockData && draft.blockData[i];
+      if (bd) {
+        // ensureBlock needs organName+organOption set first
+        validateRows(); // creates blockEl
+        if (row.blockEl) {
+          const attEl   = row.blockEl.querySelector('.rb-attendance');
+          const attNoteEl = row.blockEl.querySelector('.rb-attendance-note');
+          const preEl   = row.blockEl.querySelector('.rb-prehosting');
+          const samSel  = row.blockEl.querySelector('.rb-samgoal-submitted');
+          const remEl   = row.blockEl.querySelector('.rb-remark');
+
+          if (attEl   && bd.attendance      !== undefined) { attEl.value   = bd.attendance;      row.data.attendance      = bd.attendance; }
+          if (attNoteEl && bd.attendanceNote !== undefined) { attNoteEl.value = bd.attendanceNote; row.data.attendanceNote  = bd.attendanceNote; }
+          if (preEl   && bd.prehostingReview !== undefined) { preEl.value   = bd.prehostingReview; row.data.prehostingReview = bd.prehostingReview; }
+          if (remEl   && bd.remark          !== undefined) { remEl.value   = bd.remark;          row.data.remark          = bd.remark; }
+
+          if (samSel && bd.samGoalSubmitted) {
+            samSel.value             = bd.samGoalSubmitted;
+            row.data.samGoalSubmitted = bd.samGoalSubmitted;
+            row.data.samGoalRef      = bd.samGoalRef   || null;
+            row.data.samGoalRating   = bd.samGoalRating || '';
+            renderSamGoalArea(row);
+          }
+        }
+      }
+    });
+
+    validateRows();
+  }
+
+  // Restore prayer belt
+  if (Array.isArray(draft.prayer)) {
+    draft.prayer.forEach(snap => {
+      const block = document.querySelector(`.timeframe-block[data-timeframe="${CSS.escape(snap.tf)}"]`);
+      if (!block) return;
+
+      const checkbox = block.querySelector('.tf-present-checkbox');
+      const body     = block.querySelector('.timeframe-body');
+      const totalEl  = block.querySelector('.tf-total');
+      const addBtn   = block.querySelector('.btn-add-tribe');
+
+      if (snap.present) {
+        checkbox.checked = true;
+        body.classList.remove('is-hidden');
+      }
+      if (totalEl && snap.total !== '') totalEl.value = snap.total;
+
+      // Re-add tribe rows
+      if (Array.isArray(snap.tribes) && snap.tribes.length && addBtn) {
+        snap.tribes.forEach(t => {
+          addBtn.click(); // uses existing addTribeRow logic
+          const lastRow = block.querySelector('.tribe-row:last-child');
+          if (!lastRow) return;
+          const sel = lastRow.querySelector('.tribe-row-select');
+          if (sel) {
+            sel.value = t.tribeName;
+            sel.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+          const attInput = lastRow.querySelector('.tribe-attendance-input');
+          if (attInput && t.attendance !== '') attInput.value = t.attendance;
+        });
+      }
+    });
+  }
+
+  // Restore prayer remark
+  if (draft.prayerRemark !== undefined) {
+    const remEl = document.querySelector('.prayer-remark');
+    if (remEl) remEl.value = draft.prayerRemark;
+  }
+
+  // Restore hosting bethel
+  if (draft.hb) {
+    const ftEl = document.getElementById('hb-ft-input');
+    const stEl = document.getElementById('hb-st-input');
+    const ldEl = document.getElementById('hb-ld-input');
+    const rmEl = document.getElementById('hb-remark-input');
+    if (ftEl && draft.hb.ft     !== '') ftEl.value = draft.hb.ft;
+    if (stEl && draft.hb.st     !== '') stEl.value = draft.hb.st;
+    if (ldEl && draft.hb.ld     !== '') ldEl.value = draft.hb.ld;
+    if (rmEl && draft.hb.remark !== '') rmEl.value = draft.hb.remark;
+  }
+
+  checkFormReady();
+}
+
+// -----------------------------------------------------------
 // 3. Organ registry — same getOrgans action index.html/jsmain.js uses.
 //    The date picker stays disabled until this resolves, so a row can
 //    never be added before there's anything to put in its dropdowns.
@@ -102,6 +291,9 @@ async function loadOrgans() {
     dateInput.disabled = false;
     dateHint.textContent = 'Select the date this report covers.';
     dateHint.className = 'field-hint';
+
+    // Restore any in-progress draft now that organs are available
+    restoreRatingDraft();
   } catch (err) {
     clearTimeout(timeoutId);
     const reason = err.name === 'AbortError' ? 'Request timed out.' : err.message;
@@ -158,24 +350,27 @@ function addOrganRow() {
   rows.push(rowState);
 
   organSelect.addEventListener('change', () => {
-    rowState.organName = organSelect.value;
+    rowState.organName   = organSelect.value;
     rowState.organOption = '';
     populateRowOptions(rowState);
     validateRows();
+    saveRatingDraft();
   });
 
   optionSelect.addEventListener('change', () => {
     rowState.organOption = optionSelect.value;
     validateRows();
+    saveRatingDraft();
   });
 
   removeBtn.addEventListener('click', () => {
-    if (rows.length <= 1) return; // at least one organ must always remain
+    if (rows.length <= 1) return;
     wrap.remove();
     if (rowState.blockEl) rowState.blockEl.remove();
     const idx = rows.findIndex(r => r.id === id);
     if (idx !== -1) rows.splice(idx, 1);
     validateRows();
+    saveRatingDraft();
   });
 
   validateRows();
@@ -297,15 +492,18 @@ function createRatingBlock(row) {
   attendanceInput.addEventListener('input', () => {
     row.data.attendance = attendanceInput.value;
     checkFormReady();
+    saveRatingDraft();
   });
 
   attendanceNoteInput.addEventListener('input', () => {
     row.data.attendanceNote = attendanceNoteInput.value;
+    saveRatingDraft();
   });
 
   prehostingInput.addEventListener('input', () => {
     row.data.prehostingReview = prehostingInput.value;
     checkFormReady();
+    saveRatingDraft();
   });
 
   samGoalSelect.addEventListener('change', () => {
@@ -329,6 +527,7 @@ function createRatingBlock(row) {
 
   remarkInput.addEventListener('input', () => {
     row.data.remark = remarkInput.value;
+    saveRatingDraft();
   });
 
   return block;
@@ -371,6 +570,7 @@ function renderSamGoalArea(row) {
     area.querySelector('.rb-samgoal-rating').addEventListener('input', (e) => {
       row.data.samGoalRating = e.target.value;
       checkFormReady();
+      saveRatingDraft();
     });
     area.querySelector('.rb-view-ref').addEventListener('click', () => openRefDetailModal(row));
     area.querySelector('.rb-change-ref').addEventListener('click', () => openRefPickerModal(row));
@@ -582,6 +782,7 @@ dateInput.addEventListener('change', () => {
     organRowsField.classList.add('is-hidden');
   }
   checkFormReady();
+  saveRatingDraft();
 });
 
 // -----------------------------------------------------------
@@ -690,8 +891,9 @@ document.getElementById('rating-form').addEventListener('submit', async (e) => {
     });
 
     submitHint.textContent = 'Ratings saved successfully.';
-    submitHint.className = 'field-hint ok';
-    submitBtn.textContent = originalBtnText;
+    submitHint.className   = 'field-hint ok';
+    submitBtn.textContent  = originalBtnText;
+    clearRatingDraft();
     showRatingSuccessModal();
 
   } catch (err) {
@@ -749,6 +951,7 @@ function buildTimeframeBlock(label) {
   // the tribe picker and Total for this time frame entirely.
   checkbox.addEventListener('change', () => {
     body.classList.toggle('is-hidden', !checkbox.checked);
+    saveRatingDraft();
   });
 
   // Pulled from the Tribe organ's own Options column (the one at C8 in
@@ -812,11 +1015,13 @@ function buildTimeframeBlock(label) {
     row.querySelector('.tribe-row-select').addEventListener('change', () => {
       renderAttendanceField(row);
       validateTribeRows();
+      saveRatingDraft();
     });
 
     row.querySelector('.btn-remove-row').addEventListener('click', () => {
       row.remove();
       validateTribeRows();
+      saveRatingDraft();
     });
   }
 
@@ -843,5 +1048,24 @@ function buildTimeframeBlock(label) {
 if (prayerTimeframesContainer) {
   PRAYER_TIMEFRAMES.forEach(label => {
     prayerTimeframesContainer.appendChild(buildTimeframeBlock(label));
+  });
+}
+
+// Save draft whenever prayer remark or hosting bethel fields change
+['hb-ft-input', 'hb-st-input', 'hb-ld-input', 'hb-remark-input'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('input', saveRatingDraft);
+});
+
+const prayerRemarkEl = document.querySelector('.prayer-remark');
+if (prayerRemarkEl) prayerRemarkEl.addEventListener('input', saveRatingDraft);
+
+// Save draft on prayer total changes (delegated from the container)
+if (prayerTimeframesContainer) {
+  prayerTimeframesContainer.addEventListener('input', e => {
+    if (e.target.classList.contains('tf-total') ||
+        e.target.classList.contains('tribe-attendance-input')) {
+      saveRatingDraft();
+    }
   });
 }

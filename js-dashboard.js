@@ -218,6 +218,20 @@ async function loadOrganNamesForAssignment() {
   return organNamesForAssignment;
 }
 
+// getUsers() returns raw SYS_USER sheet headers (Full_Name, Username,
+// Role, Assigned_Organ, Status, _rowIndex) - normalize once here so the
+// rest of this file can use one consistent camelCase shape.
+function normalizeUser(u) {
+  return {
+    username: u.Username,
+    fullName: u.Full_Name,
+    role: u.Role,
+    assignedOrgan: u.Assigned_Organ,
+    status: u.Status,
+    rowIndex: u._rowIndex
+  };
+}
+
 async function loadUsers() {
   usersList.innerHTML = `<div class="empty-state">Loading users…</div>`;
   showView(usersView);
@@ -227,7 +241,7 @@ async function loadUsers() {
       callBackend('getUsers', {}),
       loadOrganNamesForAssignment()
     ]);
-    renderUsersList(users);
+    renderUsersList(users.map(normalizeUser));
   } catch (err) {
     usersList.innerHTML = `<div class="empty-state" style="color: var(--danger)">Error loading users: ${escapeHtml(err.message)}</div>`;
   }
@@ -319,7 +333,7 @@ function renderUserRow(u) {
   }
 
   return `
-    <div class="submission-item user-row" data-username="${escapeHtml(u.username)}" data-fullname="${escapeHtml(u.fullName)}" data-status="${escapeHtml(u.status)}" style="cursor:default;">
+    <div class="submission-item user-row" data-username="${escapeHtml(u.username)}" data-fullname="${escapeHtml(u.fullName)}" data-status="${escapeHtml(u.status)}" data-rowindex="${escapeHtml(u.rowIndex)}" style="cursor:default;">
       <div class="user-row-info">
         <span class="submission-identifier">${escapeHtml(u.fullName)}</span>
         <span class="submission-meta">@${escapeHtml(u.username)} · ${escapeHtml(u.role)}</span>
@@ -333,7 +347,11 @@ async function handleUserDecision(btn, decision) {
   const row = btn.closest('.user-row');
   const username = row.dataset.username;
   const fullName = row.dataset.fullname;
+  const rowIndex = Number(row.dataset.rowindex);
   const wasActive = row.dataset.status === 'Active';
+
+  // Backend's updateUserStatus speaks Status values, not decision verbs
+  const status = decision === 'approve' ? 'Active' : 'Rejected';
 
   let assignedOrgan = '';
   if (decision === 'approve') {
@@ -361,7 +379,7 @@ async function handleUserDecision(btn, decision) {
   btn.textContent = 'Working…';
 
   try {
-    await callBackend('updateUserStatus', { username, decision, assignedOrgan });
+    await callBackend('updateUserStatus', { rowIndex, status, assignedOrgan });
     loadUsers();
   } catch (err) {
     alert(`Failed to update this user: ${err.message}`);

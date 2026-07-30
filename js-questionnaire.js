@@ -238,16 +238,6 @@ function renderForm(questions) {
           </div>
         </div>`;
 
-    } else if (q.Input_Type === 'grouped-text') {
-      const items = q.Options.split('|').map(s => s.trim()).filter(Boolean);
-      const itemsHtml = items.map((label, i) => `
-        <div class="grouped-text-item" style="display:flex; flex-direction:column; gap:4px; margin-bottom:10px;">
-          <label class="grouped-text-item-label" style="font-weight:600; font-size:14px;">${label}</label>
-          <textarea name="${q.Question_ID}_${i + 1}" required rows="2"
-            placeholder="Type your answer here…"></textarea>
-        </div>`).join('');
-      inputHtml = `<div class="grouped-text-wrap" style="display:flex; flex-direction:column;">${itemsHtml}</div>`;
-
     } else {
       inputHtml = `<textarea name="${q.Question_ID}" required rows="2"
         placeholder="Type your answer here…"></textarea>`;
@@ -328,14 +318,6 @@ function getAnswerDisplay(q, answers) {
     const partB = bVal ? `${bSel}: ${bVal}` : bSel;
     return [partA, partB].filter(Boolean).join('  |  ') || '—';
   }
-  if (q.Input_Type === 'grouped-text') {
-    const items = q.Options.split('|').map(s => s.trim()).filter(Boolean);
-    const parts = items.map((label, i) => {
-      const val = answers[`${id}_${i + 1}`] || '';
-      return val ? `${label}: ${val}` : '';
-    }).filter(Boolean);
-    return parts.join('  |  ') || '—';
-  }
   return answers[id] || '—';
 }
 
@@ -354,6 +336,8 @@ function buildSummaryHtml(answers) {
   return `
     <div id="summary-capture" class="summary-capture">
       <div class="summary-header">
+        <img src="bck.png" alt="Living by Design Nation seal" class="summary-logo"
+          style="width:56px; height:56px; border-radius:50%; object-fit:cover; display:block; margin:0 auto 10px;">
         <div class="summary-eyebrow">Living by Design Nation</div>
         <div class="summary-title">${organName ? escapeHtml(organName.toUpperCase()) : ''} SAM GOALS</div>
         <div class="summary-sub">${submitterName ? 'Submitted by ' + escapeHtml(submitterName.toUpperCase()) : ''}${organOption ? ' · ' + escapeHtml(organOption.toUpperCase()) : ''}</div>
@@ -368,6 +352,90 @@ function showResultsModal(answers) {
   document.getElementById('summary-container').innerHTML = buildSummaryHtml(answers);
   document.getElementById('results-modal').classList.remove('is-hidden');
 }
+
+// ---------------------------------------------------------
+// DOWNLOAD SUBMITTED SUMMARY AS JPG / PDF
+// Captures the #summary-capture element (the same markup buildSummaryHtml
+// just rendered) exactly as shown on screen, so what the juror downloads
+// always matches what they're looking at.
+// ---------------------------------------------------------
+function buildSummaryFilename(extension) {
+  const parts = [
+    'SAM-Goals',
+    organName || 'submission',
+    organOption || '',
+    new Date().toISOString().slice(0, 10)
+  ].filter(Boolean);
+  return parts.join('_').replace(/[^a-zA-Z0-9_-]/g, '') + '.' + extension;
+}
+
+function captureSummaryCanvas() {
+  const el = document.getElementById('summary-capture');
+  return captureWithForcedPrintColors(el, () =>
+    html2canvas(el, { backgroundColor: '#ffffff', scale: 2, useCORS: true })
+  );
+}
+
+async function downloadSummaryAsJpg(btn) {
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Preparing…';
+  try {
+    const canvas = await captureSummaryCanvas();
+    const link = document.createElement('a');
+    link.download = buildSummaryFilename('jpg');
+    link.href = canvas.toDataURL('image/jpeg', 0.95);
+    link.click();
+  } catch (err) {
+    alert('Could not generate the image: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+async function downloadSummaryAsPdf(btn) {
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Preparing…';
+  try {
+    const canvas  = await captureSummaryCanvas();
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+
+    const pageWidth  = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const imgWidth   = pageWidth;
+    const imgHeight  = (canvas.height * imgWidth) / canvas.width;
+
+    // Long summaries get paginated: each page shows a vertical slice of
+    // the same tall image, shifted up by one page height at a time.
+    let heightLeft = imgHeight;
+    let position   = 0;
+
+    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+    }
+
+    pdf.save(buildSummaryFilename('pdf'));
+  } catch (err) {
+    alert('Could not generate the PDF: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+document.getElementById('download-jpg-btn').addEventListener('click', (e) => downloadSummaryAsJpg(e.currentTarget));
+document.getElementById('download-pdf-btn').addEventListener('click', (e) => downloadSummaryAsPdf(e.currentTarget));
 
 document.getElementById('modal-close-btn').addEventListener('click', () => {
   window.location.href = 'index.html';

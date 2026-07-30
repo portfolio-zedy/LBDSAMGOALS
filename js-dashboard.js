@@ -62,8 +62,9 @@ const userSessionsList = document.getElementById('user-sessions-list');
 const userSessionDetailView = document.getElementById('user-session-detail-view');
 const userSessionDetailHeader = document.getElementById('user-session-detail-header');
 const userSessionDetailBlocks = document.getElementById('user-session-detail-blocks');
+const questionsView = document.getElementById('questions-view');
 
-const allViews = [menuView, organsView, submissionsView, detailView, usersView, userSessionsView, userSessionDetailView];
+const allViews = [menuView, organsView, submissionsView, detailView, usersView, userSessionsView, userSessionDetailView, questionsView];
 
 function showView(view) {
   allViews.forEach(v => v.classList.add('is-hidden'));
@@ -612,6 +613,431 @@ document.getElementById('back-to-submissions').addEventListener('click', () => s
 document.getElementById('back-to-menu-from-users').addEventListener('click', () => showView(menuView));
 document.getElementById('back-to-users').addEventListener('click', () => showView(usersView));
 document.getElementById('back-to-user-sessions').addEventListener('click', () => showView(userSessionsView));
+
+// -----------------------------------------------------------
+// MANAGE QUESTIONS — non-destructive editing of an organ's question
+// bank. Any logged-in juror can propose a new question or an edit;
+// nothing here goes live until an admin (same ADMIN_ROLES gate as
+// Authenticate Users) approves it from the same screen.
+// -----------------------------------------------------------
+const mqOrganSelect       = document.getElementById('mq-organ-select');
+const mqOrganHint         = document.getElementById('mq-organ-hint');
+const mqContent           = document.getElementById('mq-content');
+const mqApprovalsSection  = document.getElementById('mq-approvals-section');
+const mqApprovalsList     = document.getElementById('mq-approvals-list');
+const mqMyPendingSection  = document.getElementById('mq-mypending-section');
+const mqMyPendingList     = document.getElementById('mq-mypending-list');
+const mqActiveList        = document.getElementById('mq-active-list');
+const mqAddForm           = document.getElementById('mq-add-form');
+const mqAddText           = document.getElementById('mq-add-text');
+const mqAddType           = document.getElementById('mq-add-type');
+const mqAddOptionsField   = document.getElementById('mq-add-options-field');
+const mqAddOptions        = document.getElementById('mq-add-options');
+const mqAddGroupedItemsField = document.getElementById('mq-add-groupeditems-field');
+const mqAddGroupedItemsList  = document.getElementById('mq-add-groupeditems-list');
+const mqAddAddItemBtn        = document.getElementById('mq-add-additem-btn');
+const mqAddSubmitBtn      = document.getElementById('mq-add-submit-btn');
+const mqAddHint           = document.getElementById('mq-add-hint');
+
+const mqEditModal         = document.getElementById('mq-edit-modal');
+const mqEditText          = document.getElementById('mq-edit-text');
+const mqEditType          = document.getElementById('mq-edit-type');
+const mqEditOptionsField  = document.getElementById('mq-edit-options-field');
+const mqEditOptions       = document.getElementById('mq-edit-options');
+const mqEditGroupedItemsField = document.getElementById('mq-edit-groupeditems-field');
+const mqEditGroupedItemsList  = document.getElementById('mq-edit-groupeditems-list');
+const mqEditAddItemBtn        = document.getElementById('mq-edit-additem-btn');
+const mqEditHint          = document.getElementById('mq-edit-hint');
+const mqEditSubmitBtn     = document.getElementById('mq-edit-submit-btn');
+
+// Mirrors the backend's QUESTION_TYPES_REQUIRING_OPTIONS list - kept in
+// sync by hand since the frontend has no way to ask the backend for it.
+const MQ_OPTION_INPUT_TYPES = [
+  'dropdown', 'double-dropdown', 'dropdown-text',
+  'double-dropdown-number', 'double-dropdown-text', 'grouped-text'
+];
+
+let mqOrganOptionsLoaded = false;
+let mqCurrentOrgan       = '';
+let mqEditingQuestionId  = null;
+
+// Organ picker here reuses the same cached organ-name list Authenticate
+// Users already fetches for its "assign on approve" dropdown, filtered
+// the same way the SAM Goal Responses organ cards are: a juror assigned
+// to one specific organ only manages that organ's questions.
+async function ensureMqOrganOptions() {
+  if (mqOrganOptionsLoaded) return;
+
+  const organNames = await loadOrganNamesForAssignment();
+  const visibleOrgans = userSession.assignedOrgan === 'All'
+    ? organNames
+    : organNames.filter(name => name === userSession.assignedOrgan);
+
+  mqOrganSelect.innerHTML = `<option value="" selected disabled>Please select an organ</option>` +
+    visibleOrgans.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
+
+  mqOrganOptionsLoaded = true;
+}
+
+document.getElementById('menu-manage-questions').addEventListener('click', async () => {
+  showView(questionsView);
+  mqContent.classList.add('is-hidden');
+  mqOrganHint.textContent = '';
+  mqOrganHint.className = 'field-hint';
+
+  try {
+    await ensureMqOrganOptions();
+  } catch (err) {
+    mqOrganHint.textContent = `Error loading organs: ${err.message}`;
+    mqOrganHint.className = 'field-hint error';
+  }
+});
+
+document.getElementById('back-to-menu-from-questions').addEventListener('click', () => showView(menuView));
+
+mqOrganSelect.addEventListener('change', () => {
+  if (mqOrganSelect.value) loadQuestionManagement(mqOrganSelect.value);
+});
+
+// --- grouped-text item-list builder (Add New Question) ---
+// Every row here is brand new and unsubmitted, so free add/remove is
+// completely safe - the append-only restriction only matters once a
+// sub-item is actually part of a live, approved question (see the Edit
+// modal's builder below).
+function mqCreateAddItemRow(value) {
+  const row = document.createElement('div');
+  row.className = 'grouped-item-row';
+  row.style.cssText = 'display:flex; gap:8px; align-items:center; margin-bottom:6px;';
+  row.innerHTML = `
+    <input type="text" class="mq-add-item-input" placeholder="e.g. i. This is a sample" style="flex:1;" value="${escapeHtml(value || '')}">
+    <button type="button" class="btn btn-secondary mq-remove-item-btn" style="flex-shrink:0; padding:6px 10px;">✕</button>
+  `;
+  row.querySelector('.mq-remove-item-btn').addEventListener('click', () => {
+    row.remove();
+    if (!mqAddGroupedItemsList.children.length) mqResetAddGroupedItems();
+  });
+  return row;
+}
+
+function mqResetAddGroupedItems() {
+  mqAddGroupedItemsList.innerHTML = '';
+  mqAddGroupedItemsList.appendChild(mqCreateAddItemRow());
+}
+
+function mqCollectAddGroupedItems() {
+  return Array.from(mqAddGroupedItemsList.querySelectorAll('.mq-add-item-input'))
+    .map(inp => inp.value.trim())
+    .filter(Boolean);
+}
+
+mqAddAddItemBtn.addEventListener('click', () => {
+  mqAddGroupedItemsList.appendChild(mqCreateAddItemRow());
+});
+
+// --- grouped-text item-list builder (Edit existing question) ---
+// Items already part of the live version render as fixed-position rows
+// (wording editable, no remove button, no drag/reorder) - only newly
+// appended rows get a remove button, since removing one of those before
+// submitting just means "don't append it," which is always safe.
+function mqRenderEditGroupedItems(existingItems) {
+  mqEditGroupedItemsList.innerHTML = '';
+  existingItems.forEach((label, i) => {
+    const row = document.createElement('div');
+    row.className = 'grouped-item-row';
+    row.dataset.existing = 'true';
+    row.style.cssText = 'display:flex; gap:8px; align-items:center; margin-bottom:6px;';
+    row.innerHTML = `
+      <span style="width:28px; text-align:center; opacity:0.6; flex-shrink:0;">#${i + 1}</span>
+      <input type="text" class="mq-edit-item-input" style="flex:1;" value="${escapeHtml(label)}">
+    `;
+    mqEditGroupedItemsList.appendChild(row);
+  });
+}
+
+function mqAddEditAppendRow() {
+  const position = mqEditGroupedItemsList.querySelectorAll('.mq-edit-item-input').length + 1;
+  const row = document.createElement('div');
+  row.className = 'grouped-item-row';
+  row.style.cssText = 'display:flex; gap:8px; align-items:center; margin-bottom:6px;';
+  row.innerHTML = `
+    <span style="width:28px; text-align:center; opacity:0.6; flex-shrink:0;">#${position}</span>
+    <input type="text" class="mq-edit-item-input" placeholder="New sub-item…" style="flex:1;">
+    <button type="button" class="btn btn-secondary mq-remove-item-btn" style="flex-shrink:0; padding:6px 10px;">✕</button>
+  `;
+  row.querySelector('.mq-remove-item-btn').addEventListener('click', () => {
+    row.remove();
+    mqRenumberEditRows();
+  });
+  mqEditGroupedItemsList.appendChild(row);
+}
+
+// Keeps the "#N" labels honest after a not-yet-submitted new row gets
+// removed - existing (already-live) rows never move, only trailing
+// unsubmitted rows can shift.
+function mqRenumberEditRows() {
+  mqEditGroupedItemsList.querySelectorAll('.grouped-item-row').forEach((row, i) => {
+    const span = row.querySelector('span');
+    if (span) span.textContent = `#${i + 1}`;
+  });
+}
+
+function mqCollectEditGroupedItems() {
+  return Array.from(mqEditGroupedItemsList.querySelectorAll('.mq-edit-item-input'))
+    .map(inp => inp.value.trim())
+    .filter(Boolean);
+}
+
+mqEditAddItemBtn.addEventListener('click', mqAddEditAppendRow);
+
+// --- Options-area mode switching (plain text field vs. item builder) ---
+function mqUpdateAddOptionsUI() {
+  const type = mqAddType.value;
+  if (type === 'grouped-text') {
+    mqAddOptionsField.classList.add('is-hidden');
+    mqAddGroupedItemsField.classList.remove('is-hidden');
+    if (!mqAddGroupedItemsList.children.length) mqResetAddGroupedItems();
+  } else if (MQ_OPTION_INPUT_TYPES.indexOf(type) !== -1) {
+    mqAddOptionsField.classList.remove('is-hidden');
+    mqAddGroupedItemsField.classList.add('is-hidden');
+  } else {
+    mqAddOptionsField.classList.add('is-hidden');
+    mqAddGroupedItemsField.classList.add('is-hidden');
+  }
+}
+
+mqAddType.addEventListener('change', mqUpdateAddOptionsUI);
+
+async function loadQuestionManagement(organName) {
+  mqCurrentOrgan = organName;
+  mqContent.classList.remove('is-hidden');
+
+  mqActiveList.innerHTML = `<div class="empty-state">Loading questions…</div>`;
+  mqMyPendingList.innerHTML = '';
+  mqMyPendingSection.classList.add('is-hidden');
+  mqApprovalsList.innerHTML = '';
+  mqApprovalsSection.classList.add('is-hidden');
+  mqAddHint.textContent = '';
+  mqAddForm.reset();
+  mqAddOptionsField.classList.add('is-hidden');
+
+  try {
+    // Only admins can call getPendingQuestionApprovals - skip it entirely
+    // for everyone else rather than firing a call that will just 400.
+    const calls = [callBackend('getOrganQuestionsForManagement', { organName })];
+    if (canManageUsers) calls.push(callBackend('getPendingQuestionApprovals', { organName }));
+
+    const [mgmt, approvals] = await Promise.all(calls);
+
+    renderActiveQuestions(mgmt.activeQuestions);
+    renderMyPending(mgmt.myPending);
+    if (canManageUsers) renderPendingApprovals(approvals || []);
+
+  } catch (err) {
+    mqActiveList.innerHTML = `<div class="empty-state" style="color: var(--danger)">Error loading questions: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function renderActiveQuestions(questions) {
+  if (!questions.length) {
+    mqActiveList.innerHTML = `<div class="empty-state">No active questions for this organ yet.</div>`;
+    return;
+  }
+
+  mqActiveList.innerHTML = questions.map(q => `
+    <div class="submission-item" style="cursor:default;">
+      <div class="user-row-info">
+        <span class="submission-identifier">${escapeHtml(q.questionText)}</span>
+        <span class="submission-meta">${escapeHtml(q.inputType)}${q.options ? ' · ' + escapeHtml(q.options) : ''} · v${escapeHtml(q.version)}${q.hasPendingEdit ? ' · Edit pending review' : ''}</span>
+      </div>
+      <button type="button" class="btn btn-secondary mq-edit-btn"
+        data-qid="${escapeHtml(q.questionId)}"
+        data-text="${escapeHtml(q.questionText)}"
+        data-type="${escapeHtml(q.inputType)}"
+        data-options="${escapeHtml(q.options || '')}"
+        ${q.hasPendingEdit ? 'disabled title="An edit for this question is already awaiting review"' : ''}>Edit</button>
+    </div>
+  `).join('');
+
+  mqActiveList.querySelectorAll('.mq-edit-btn').forEach(btn => {
+    btn.addEventListener('click', () => openMqEditModal(btn.dataset));
+  });
+}
+
+// A juror's own pending items (new questions or edits), so they can see
+// their proposal is in the queue without needing admin access themselves.
+function renderMyPending(myPending) {
+  if (!myPending.length) return;
+  mqMyPendingSection.classList.remove('is-hidden');
+
+  mqMyPendingList.innerHTML = myPending.map(q => `
+    <div class="submission-item" style="cursor:default;">
+      <div class="user-row-info">
+        <span class="submission-identifier">${escapeHtml(q.questionText)}</span>
+        <span class="submission-meta">${q.isEdit ? 'Edit' : 'New question'} · Submitted ${escapeHtml(q.submittedAt)}</span>
+      </div>
+      <span class="status-badge">Pending</span>
+    </div>
+  `).join('');
+}
+
+// Admin-only review queue - shows the old wording struck through next to
+// the proposed wording for edits, so a reviewer can see exactly what
+// would change before approving it.
+function renderPendingApprovals(pending) {
+  if (!pending.length) return;
+  mqApprovalsSection.classList.remove('is-hidden');
+
+  mqApprovalsList.innerHTML = pending.map(p => `
+    <div class="submission-item" style="cursor:default; flex-direction:column; align-items:flex-start; gap:6px;">
+      <div class="user-row-info" style="width:100%;">
+        <span class="submission-identifier">${p.isEdit ? 'Edit' : 'New Question'}</span>
+        <span class="submission-meta">Submitted by ${escapeHtml(p.submittedByName)} · ${escapeHtml(p.submittedAt)}</span>
+      </div>
+      ${p.isEdit ? `<div class="qa-answer" style="text-decoration:line-through; opacity:0.6;">${escapeHtml(p.previousText)}</div>` : ''}
+      <div class="qa-answer">${escapeHtml(p.newText)}</div>
+      <div class="user-decision-row">
+        <button type="button" class="btn-user-approve mq-approve-btn" data-row="${p.rowIndex}">Approve</button>
+        <button type="button" class="btn-user-reject mq-reject-btn" data-row="${p.rowIndex}">Reject</button>
+      </div>
+    </div>
+  `).join('');
+
+  mqApprovalsList.querySelectorAll('.mq-approve-btn').forEach(btn => {
+    btn.addEventListener('click', () => handleQuestionDecision(btn, 'approve'));
+  });
+  mqApprovalsList.querySelectorAll('.mq-reject-btn').forEach(btn => {
+    btn.addEventListener('click', () => handleQuestionDecision(btn, 'reject'));
+  });
+}
+
+async function handleQuestionDecision(btn, decision) {
+  const rowIndex = Number(btn.dataset.row);
+  const card = btn.closest('.submission-item');
+  card.querySelectorAll('button').forEach(b => b.disabled = true);
+  btn.textContent = 'Working…';
+
+  try {
+    const action = decision === 'approve' ? 'approveQuestionProposal' : 'rejectQuestionProposal';
+    await callBackend(action, { organName: mqCurrentOrgan, rowIndex });
+    loadQuestionManagement(mqCurrentOrgan);
+  } catch (err) {
+    alert(`Failed to ${decision} this question: ${err.message}`);
+    card.querySelectorAll('button').forEach(b => b.disabled = false);
+    btn.textContent = decision === 'approve' ? 'Approve' : 'Reject';
+  }
+}
+
+// --- Add a brand new question ---
+mqAddForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const questionText = mqAddText.value.trim();
+  const inputType    = mqAddType.value;
+  const options       = inputType === 'grouped-text'
+    ? mqCollectAddGroupedItems().join('|')
+    : mqAddOptions.value.trim();
+
+  if (!questionText || !inputType) return;
+  if (MQ_OPTION_INPUT_TYPES.indexOf(inputType) !== -1 && !options) {
+    mqAddHint.textContent = inputType === 'grouped-text'
+      ? 'At least one sub-item is required.'
+      : 'Options are required for this input type.';
+    mqAddHint.className = 'field-hint error';
+    return;
+  }
+
+  mqAddSubmitBtn.disabled = true;
+  mqAddSubmitBtn.textContent = 'Submitting…';
+  mqAddHint.textContent = '';
+
+  try {
+    await callBackend('submitQuestion', { organName: mqCurrentOrgan, questionText, inputType, options });
+    mqAddForm.reset();
+    mqAddOptionsField.classList.add('is-hidden');
+    mqAddGroupedItemsField.classList.add('is-hidden');
+    mqResetAddGroupedItems();
+    mqAddHint.textContent = 'Submitted for approval.';
+    mqAddHint.className = 'field-hint ok';
+    loadQuestionManagement(mqCurrentOrgan);
+  } catch (err) {
+    mqAddHint.textContent = err.message;
+    mqAddHint.className = 'field-hint error';
+  } finally {
+    mqAddSubmitBtn.disabled = false;
+    mqAddSubmitBtn.textContent = 'Submit for Approval';
+  }
+});
+
+// --- Propose an edit to an existing active question ---
+function openMqEditModal(dataset) {
+  mqEditingQuestionId = dataset.qid;
+  mqEditText.value = dataset.text;
+  mqEditType.value = dataset.type;
+  mqEditType.disabled = true; // backend rejects type changes on an edit - see submitQuestionEdit
+
+  if (dataset.type === 'grouped-text') {
+    mqEditOptionsField.classList.add('is-hidden');
+    mqEditGroupedItemsField.classList.remove('is-hidden');
+    const existingItems = String(dataset.options || '').split('|').map(s => s.trim()).filter(Boolean);
+    mqRenderEditGroupedItems(existingItems);
+  } else {
+    mqEditGroupedItemsField.classList.add('is-hidden');
+    if (MQ_OPTION_INPUT_TYPES.indexOf(dataset.type) !== -1) {
+      mqEditOptionsField.classList.remove('is-hidden');
+    } else {
+      mqEditOptionsField.classList.add('is-hidden');
+    }
+    mqEditOptions.value = dataset.options || '';
+  }
+
+  mqEditHint.textContent = 'Input type can\'t be changed on an edit — retire this question and add a new one if the type itself needs to change.';
+  mqEditHint.className = 'field-hint';
+  mqEditModal.classList.remove('is-hidden');
+}
+
+document.getElementById('mq-edit-cancel-btn').addEventListener('click', () => {
+  mqEditModal.classList.add('is-hidden');
+});
+
+mqEditSubmitBtn.addEventListener('click', async () => {
+  const questionText = mqEditText.value.trim();
+  const inputType    = mqEditType.value;
+  const options       = inputType === 'grouped-text'
+    ? mqCollectEditGroupedItems().join('|')
+    : mqEditOptions.value.trim();
+
+  if (!questionText || !inputType) {
+    mqEditHint.textContent = 'Question text and input type are required.';
+    mqEditHint.className = 'field-hint error';
+    return;
+  }
+  if (MQ_OPTION_INPUT_TYPES.indexOf(inputType) !== -1 && !options) {
+    mqEditHint.textContent = inputType === 'grouped-text'
+      ? 'At least one sub-item is required.'
+      : 'Options are required for this input type.';
+    mqEditHint.className = 'field-hint error';
+    return;
+  }
+
+  mqEditSubmitBtn.disabled = true;
+  mqEditSubmitBtn.textContent = 'Submitting…';
+
+  try {
+    await callBackend('submitQuestionEdit', {
+      organName: mqCurrentOrgan,
+      questionId: mqEditingQuestionId,
+      questionText, inputType, options
+    });
+    mqEditModal.classList.add('is-hidden');
+    loadQuestionManagement(mqCurrentOrgan);
+  } catch (err) {
+    mqEditHint.textContent = err.message;
+    mqEditHint.className = 'field-hint error';
+  } finally {
+    mqEditSubmitBtn.disabled = false;
+    mqEditSubmitBtn.textContent = 'Submit for Approval';
+  }
+});
 
 // -----------------------------------------------------------
 // DASHBOARD LANDING MENU

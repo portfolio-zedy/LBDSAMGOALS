@@ -102,3 +102,80 @@ if (themeToggleBtn) {
     }
   });
 }
+
+/* ---------------------------------------------------------
+   FORCED PRINT COLORS (JPG/PDF downloads)
+   A downloaded summary is a document someone may print, forward, or
+   file away - it should always read as plain black text on white,
+   regardless of whatever theme the person happened to be in when they
+   generated it. Shared here since both the Questionnaire's results
+   modal and the Rating form's success modal need identical behavior.
+--------------------------------------------------------- */
+(function injectForcedPrintColorStyle() {
+  const style = document.createElement('style');
+  style.textContent = `
+    .force-print-colors, .force-print-colors * {
+      color: #000000 !important;
+      background-color: #ffffff !important;
+      border-color: #B8933E !important;
+      box-shadow: none !important;
+    }
+    .force-print-colors img, .force-print-colors svg, .force-print-colors image {
+      background-color: transparent !important;
+    }
+    .force-print-colors .no-export {
+      display: none !important;
+    }
+
+    /* Download buttons should hug their own text ("Download JPG" /
+       "Download PDF"), not stretch to match their sibling primary/
+       secondary action buttons in a shared flex row. */
+    .btn-download {
+      flex: 0 0 auto !important;
+      width: auto !important;
+      display: inline-flex !important;
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap;
+    }
+
+    /* The standalone download-actions row on the Organ SAM Goal
+       Responses and All Organ Ratings detail views (not a modal, so it
+       has no existing layout rules of its own). */
+    .detail-download-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+  `;
+  document.head.appendChild(style);
+})();
+
+// Waits for every <img> inside a container to finish loading (or fail)
+// before it's safe to hand that container to html2canvas - otherwise a
+// logo dropped into the DOM moments earlier can get captured blank.
+function waitForImagesToLoad(container) {
+  const imgs = Array.from(container.querySelectorAll('img'));
+  return Promise.all(imgs.map(img => {
+    if (img.complete && img.naturalWidth !== 0) return Promise.resolve();
+    return new Promise(resolve => {
+      img.addEventListener('load', resolve, { once: true });
+      img.addEventListener('error', resolve, { once: true }); // don't hang forever on a failed load
+    });
+  }));
+}
+
+// Temporarily forces black-on-white styling on a capture target, waits
+// for its images to be ready, runs the given capture function, then
+// always restores the element's normal theme-aware appearance
+// afterward - even if the capture itself throws.
+async function captureWithForcedPrintColors(el, captureFn) {
+  el.classList.add('force-print-colors');
+  try {
+    await waitForImagesToLoad(el);
+    return await captureFn();
+  } finally {
+    el.classList.remove('force-print-colors');
+  }
+}

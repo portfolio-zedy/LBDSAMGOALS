@@ -12,6 +12,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Lexend:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body class="dashboard-page">
 
@@ -186,8 +188,11 @@
     <div class="modal-scroll">
       <h3 class="modal-title">Ratings Saved</h3>
       <p id="rating-success-body" style="font-family:var(--font-sans); font-size:14px; color:var(--ink-soft); line-height:1.5;"></p>
+      <div id="rating-summary-container"></div>
     </div>
     <div class="modal-actions">
+      <button type="button" class="btn btn-secondary btn-download" id="rating-download-jpg-btn">Download JPG</button>
+      <button type="button" class="btn btn-secondary btn-download" id="rating-download-pdf-btn">Download PDF</button>
       <button type="button" class="btn btn-primary" id="rating-success-done-btn">Done</button>
     </div>
   </div>

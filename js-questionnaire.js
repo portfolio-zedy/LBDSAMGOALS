@@ -238,6 +238,16 @@ function renderForm(questions) {
           </div>
         </div>`;
 
+    } else if (q.Input_Type === 'grouped-text') {
+      const items = q.Options.split('|').map(s => s.trim()).filter(Boolean);
+      const itemsHtml = items.map((label, i) => `
+        <div class="grouped-text-item" style="display:flex; flex-direction:column; gap:4px; margin-bottom:10px;">
+          <label class="grouped-text-item-label" style="font-weight:600; font-size:14px;">${label}</label>
+          <textarea name="${q.Question_ID}_${i + 1}" required rows="2"
+            placeholder="Type your answer here…"></textarea>
+        </div>`).join('');
+      inputHtml = `<div class="grouped-text-wrap" style="display:flex; flex-direction:column;">${itemsHtml}</div>`;
+
     } else {
       inputHtml = `<textarea name="${q.Question_ID}" required rows="2"
         placeholder="Type your answer here…"></textarea>`;
@@ -317,6 +327,14 @@ function getAnswerDisplay(q, answers) {
     const partA = aVal ? `${aSel}: ${aVal}` : aSel;
     const partB = bVal ? `${bSel}: ${bVal}` : bSel;
     return [partA, partB].filter(Boolean).join('  |  ') || '—';
+  }
+  if (q.Input_Type === 'grouped-text') {
+    const items = q.Options.split('|').map(s => s.trim()).filter(Boolean);
+    const parts = items.map((label, i) => {
+      const val = answers[`${id}_${i + 1}`] || '';
+      return val ? `${label}: ${val}` : '';
+    }).filter(Boolean);
+    return parts.join('  |  ') || '—';
   }
   return answers[id] || '—';
 }

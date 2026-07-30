@@ -83,6 +83,14 @@
           <span class="menu-card-arrow">→</span>
         </button>
 
+        <button type="button" class="menu-card" id="menu-manage-questions">
+          <div>
+            <span class="menu-card-title">Manage Questions</span>
+            <span class="menu-card-desc">Add or edit an organ's SAM Goals questions, subject to admin approval.</span>
+          </div>
+          <span class="menu-card-arrow">→</span>
+        </button>
+
         <!-- Only revealed by js-dashboard.js if this session's role is
              CHIEF JUROR, VICE JUROR, or MAP - stays hidden and inert for
              everyone else, the backend gate is the real authority. -->
@@ -114,6 +122,87 @@
       <button type="button" class="btn-back" id="back-to-organs">← Back to Organs</button>
       <h2 class="dash-view-title" id="submissions-organ-title"></h2>
       <div class="submissions-list" id="submissions-list"></div>
+    </div>
+
+    <!-- MANAGE QUESTIONS: pick an organ, see its live questions with Edit
+         buttons, propose new ones - everything here lands Pending until
+         an admin approves it on the same screen. -->
+    <div class="dash-view is-hidden" id="questions-view">
+      <button type="button" class="btn-back" id="back-to-menu-from-questions">← Back to Dashboard</button>
+      <h2 class="dash-view-title">Manage Questions</h2>
+
+      <div class="field">
+        <label for="mq-organ-select">Organ</label>
+        <div class="select-wrap">
+          <select id="mq-organ-select">
+            <option value="" selected disabled>Please select an organ</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-hint" id="mq-organ-hint"></div>
+
+      <div id="mq-content" class="is-hidden">
+
+        <!-- Admin-only review queue -->
+        <div id="mq-approvals-section" class="is-hidden">
+          <h3 class="rating-block-title">Pending Approvals</h3>
+          <div class="submissions-list" id="mq-approvals-list"></div>
+          <hr class="rule part-divider">
+        </div>
+
+        <!-- This juror's own submissions still awaiting a decision -->
+        <div id="mq-mypending-section" class="is-hidden">
+          <h3 class="rating-block-title">Your Pending Submissions</h3>
+          <div class="submissions-list" id="mq-mypending-list"></div>
+          <hr class="rule part-divider">
+        </div>
+
+        <h3 class="rating-block-title">Active Questions</h3>
+        <div class="submissions-list" id="mq-active-list"></div>
+
+        <hr class="rule part-divider">
+
+        <h3 class="rating-block-title">Add a New Question</h3>
+        <form id="mq-add-form" novalidate>
+          <div class="field">
+            <label for="mq-add-text">Question Text</label>
+            <textarea id="mq-add-text" rows="2" required placeholder="Type the question…"></textarea>
+          </div>
+          <div class="field">
+            <label for="mq-add-type">Input Type</label>
+            <div class="select-wrap">
+              <select id="mq-add-type" required>
+                <option value="" selected disabled>Select…</option>
+                <option value="text">Text</option>
+                <option value="number">Number</option>
+                <option value="dropdown">Dropdown</option>
+                <option value="double-dropdown">Double Dropdown</option>
+                <option value="dropdown-text">Dropdown + Text</option>
+                <option value="double-dropdown-number">Double Dropdown + Number</option>
+                <option value="double-dropdown-text">Double Dropdown + Text</option>
+                <option value="grouped-text">Grouped Text (multiple prompts, one question)</option>
+              </select>
+            </div>
+          </div>
+          <div class="field is-hidden" id="mq-add-options-field">
+            <label for="mq-add-options">Options</label>
+            <input type="text" id="mq-add-options" placeholder="Comma-separated, e.g. Yes,No">
+            <div class="field-hint">For double types, separate the two sets with a "|", e.g. Yes,No|Red,Blue</div>
+          </div>
+          <div class="field is-hidden" id="mq-add-groupeditems-field">
+            <label>Sub-Items</label>
+            <div id="mq-add-groupeditems-list"></div>
+            <button type="button" class="btn-add-organ" id="mq-add-additem-btn">+ Add Item</button>
+            <div class="field-hint">Each item renders as its own "prompt → answer" pair, e.g. "i. This is a sample".</div>
+          </div>
+          <div class="actions">
+            <div class="action-container">
+              <button type="submit" class="btn btn-primary" id="mq-add-submit-btn">Submit for Approval</button>
+            </div>
+          </div>
+          <div class="field-hint" id="mq-add-hint"></div>
+        </form>
+      </div>
     </div>
 
     <!-- LEVEL 3: one submission's full Question/Answer list -->
@@ -164,6 +253,53 @@
     </div>
     <div class="modal-actions">
       <button type="button" class="btn btn-secondary" id="ref-view-close-btn">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Question — non-destructive: submitting here never overwrites
+     the live question, it proposes a Pending replacement for an admin
+     to approve -->
+<div class="modal-overlay is-hidden" id="mq-edit-modal">
+  <div class="modal-card">
+    <div class="modal-scroll">
+      <h3 class="modal-title">Edit Question</h3>
+      <form id="mq-edit-form" novalidate>
+        <div class="field">
+          <label for="mq-edit-text">Question Text</label>
+          <textarea id="mq-edit-text" rows="2" required></textarea>
+        </div>
+        <div class="field">
+          <label for="mq-edit-type">Input Type</label>
+          <div class="select-wrap">
+            <select id="mq-edit-type" required>
+              <option value="text">Text</option>
+              <option value="number">Number</option>
+              <option value="dropdown">Dropdown</option>
+              <option value="double-dropdown">Double Dropdown</option>
+              <option value="dropdown-text">Dropdown + Text</option>
+              <option value="double-dropdown-number">Double Dropdown + Number</option>
+              <option value="double-dropdown-text">Double Dropdown + Text</option>
+              <option value="grouped-text">Grouped Text (multiple prompts, one question)</option>
+            </select>
+          </div>
+        </div>
+        <div class="field is-hidden" id="mq-edit-options-field">
+          <label for="mq-edit-options">Options</label>
+          <input type="text" id="mq-edit-options" placeholder="Comma-separated, e.g. Yes,No">
+        </div>
+        <div class="field is-hidden" id="mq-edit-groupeditems-field">
+          <label>Sub-Items</label>
+          <div id="mq-edit-groupeditems-list"></div>
+          <button type="button" class="btn-add-organ" id="mq-edit-additem-btn">+ Add Item</button>
+          <div class="field-hint">Existing items can be reworded but not removed or reordered — new items can only be appended at the end.</div>
+        </div>
+        <div class="field-hint" id="mq-edit-hint"></div>
+      </form>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-secondary" id="mq-edit-cancel-btn">Cancel</button>
+      <button type="button" class="btn btn-primary" id="mq-edit-submit-btn">Submit for Approval</button>
     </div>
   </div>
 </div>

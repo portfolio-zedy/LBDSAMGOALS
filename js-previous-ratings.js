@@ -116,13 +116,17 @@ function renderSessionsList(sessions) {
 // -----------------------------------------------------------
 // LEVEL 2: one session's full set of rating blocks, read-only
 // -----------------------------------------------------------
+let currentSessionMeta = null; // set on successful load, used for download filenames
+
 async function loadSessionDetail(sessionId) {
   sessionDetailBlocks.innerHTML = `<div class="empty-state">Loading ratings…</div>`;
   sessionDetailHeader.innerHTML = '';
+  currentSessionMeta = null;
   showView(sessionDetailView);
 
   try {
     const detail = await callBackend('getRatingSessionDetail', { sessionId });
+    currentSessionMeta = detail;
 
     sessionDetailHeader.innerHTML = `
       <div class="detail-organ">${escapeHtml(detail.reportTitle)}</div>
@@ -152,7 +156,7 @@ async function loadSessionDetail(sessionId) {
             <div class="qa-question">SAM Goal Form Submission</div>
             <div class="qa-answer">
               ${b.samGoalSubmitted === 'Yes'
-                ? `Yes · ${escapeHtml(b.samGoalRating)} / 10 <button type="button" class="rb-view-ref-link" data-organ="${escapeHtml(b.organName)}" data-row="${escapeHtml(b.samGoalRefRowIndex)}">View submission</button>`
+                ? `Yes · ${escapeHtml(b.samGoalRating)} / 10 <button type="button" class="rb-view-ref-link no-export" data-organ="${escapeHtml(b.organName)}" data-row="${escapeHtml(b.samGoalRefRowIndex)}">View submission</button>`
                 : `No · 0 / 10 (auto)`}
             </div>
           </div>
@@ -177,6 +181,89 @@ async function loadSessionDetail(sessionId) {
     sessionDetailBlocks.innerHTML = `<div class="empty-state" style="color: var(--danger)">Error: ${escapeHtml(err.message)}</div>`;
   }
 }
+
+// ---------------------------------------------------------
+// DOWNLOAD THIS RATING SESSION AS JPG / PDF
+// Same html2canvas + jsPDF approach used everywhere else in the app,
+// routed through common.js's shared black-on-white forcing helper,
+// capturing #session-capture exactly as shown (interactive controls
+// like "View submission" are hidden via the .no-export class).
+// ---------------------------------------------------------
+function buildSessionDownloadFilename(extension) {
+  const meta = currentSessionMeta || {};
+  const parts = [
+    'SAM-Goals-Rating',
+    meta.reportTitle || 'session',
+    meta.ratingDate || new Date().toISOString().slice(0, 10)
+  ].filter(Boolean);
+  return parts.join('_').replace(/[^a-zA-Z0-9_-]/g, '') + '.' + extension;
+}
+
+function captureSessionCanvas() {
+  const el = document.getElementById('session-capture');
+  return captureWithForcedPrintColors(el, () =>
+    html2canvas(el, { backgroundColor: '#ffffff', scale: 2, useCORS: true })
+  );
+}
+
+async function downloadSessionAsJpg(btn) {
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Preparing…';
+  try {
+    const canvas = await captureSessionCanvas();
+    const link = document.createElement('a');
+    link.download = buildSessionDownloadFilename('jpg');
+    link.href = canvas.toDataURL('image/jpeg', 0.95);
+    link.click();
+  } catch (err) {
+    alert('Could not generate the image: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+async function downloadSessionAsPdf(btn) {
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Preparing…';
+  try {
+    const canvas  = await captureSessionCanvas();
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+
+    const pageWidth  = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const imgWidth   = pageWidth;
+    const imgHeight  = (canvas.height * imgWidth) / canvas.width;
+
+    let heightLeft = imgHeight;
+    let position   = 0;
+
+    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+    }
+
+    pdf.save(buildSessionDownloadFilename('pdf'));
+  } catch (err) {
+    alert('Could not generate the PDF: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+document.getElementById('session-download-jpg-btn').addEventListener('click', (e) => downloadSessionAsJpg(e.currentTarget));
+document.getElementById('session-download-pdf-btn').addEventListener('click', (e) => downloadSessionAsPdf(e.currentTarget));
 
 // Part 2 — read-only Prayer Belt time frames, if this session has any.
 // The closing remark is duplicated onto every Prayer Belt row server-

@@ -791,14 +791,235 @@ dateInput.addEventListener('change', () => {
 const ratingSuccessModal = document.getElementById('rating-success-modal');
 const ratingSuccessBody = document.getElementById('rating-success-body');
 
-function showRatingSuccessModal() {
+function showRatingSuccessModal(ratingsPayload, prayerBeltData, hostingBethel) {
   ratingSuccessBody.textContent = `Your ratings for ${reportTitle} on ${dateInput.value} have been recorded.`;
+  document.getElementById('rating-summary-container').innerHTML =
+    buildRatingSummaryHtml(ratingsPayload, prayerBeltData, hostingBethel);
   ratingSuccessModal.classList.remove('is-hidden');
 }
 
 document.getElementById('rating-success-done-btn').addEventListener('click', () => {
   window.location.href = 'dashboard.html';
 });
+
+// ---------------------------------------------------------
+// SUMMARY BUILDER — deliberately mirrors js-previous-ratings.js's
+// read-only session detail rendering (same rating-block/qa-row markup,
+// same Prayer Belt / Hosting Bethel structure) so what a juror sees
+// immediately after submitting looks identical to what they'd see
+// pulling this same session back up later from "All Organ Ratings."
+// Built straight from the payload just sent to saveRating, not a
+// re-fetch, so there's no risk of it drifting from what was actually
+// saved.
+// ---------------------------------------------------------
+function buildRatingSummaryHtml(ratingsPayload, prayerBeltData, hostingBethel) {
+  const dateStr = new Date().toLocaleDateString(undefined, {
+    weekday: 'long', year: 'numeric', month: 'long', day: '2-digit'
+  });
+
+  const organRowsHtml = ratingsPayload.map(r => `
+    <div class="rating-block">
+      <h3 class="rating-block-title">RATING: '${escapeHtml(r.organOption)}'</h3>
+      <div class="qa-row">
+        <div class="qa-body">
+          <div class="qa-question">Attendance</div>
+          <div class="qa-answer">${escapeHtml(r.attendance || '—')}${r.attendanceNote ? ' — ' + escapeHtml(r.attendanceNote) : ''}</div>
+        </div>
+      </div>
+      <div class="qa-row">
+        <div class="qa-body">
+          <div class="qa-question">Prehosting Review</div>
+          <div class="qa-answer">${escapeHtml(r.prehostingReview || 0)} / 10</div>
+        </div>
+      </div>
+      <div class="qa-row">
+        <div class="qa-body">
+          <div class="qa-question">SAM Goal Form Submission</div>
+          <div class="qa-answer">${r.samGoalSubmitted === 'Yes'
+            ? `Yes · ${escapeHtml(r.samGoalRating)} / 10`
+            : 'No · 0 / 10 (auto)'}</div>
+        </div>
+      </div>
+      ${r.remark ? `
+      <div class="qa-row">
+        <div class="qa-body">
+          <div class="qa-question">Remark</div>
+          <div class="qa-answer">${escapeHtml(r.remark)}</div>
+        </div>
+      </div>` : ''}
+    </div>
+  `).join('');
+
+  return `
+    <div id="rating-summary-capture" class="summary-capture">
+      <div class="summary-header">
+        <img src="bck.png" alt="Living by Design Nation seal" class="summary-logo"
+          style="width:56px; height:56px; border-radius:50%; object-fit:cover; display:block; margin:0 auto 10px;">
+        <div class="summary-eyebrow">Living by Design Nation</div>
+        <div class="summary-title">${escapeHtml(reportTitle)}</div>
+        <div class="summary-sub">Submitted by ${escapeHtml((userSession.fullName || userSession.username || '').toUpperCase())} · ${escapeHtml(dateInput.value)}</div>
+        <div class="summary-date">${dateStr}</div>
+      </div>
+      <div class="summary-body">
+        ${organRowsHtml}
+        ${buildPrayerBeltSummaryHtml(prayerBeltData)}
+        ${buildHostingBethelSummaryHtml(hostingBethel)}
+      </div>
+    </div>
+  `;
+}
+
+function buildPrayerBeltSummaryHtml(prayerBeltData) {
+  if (!prayerBeltData || !prayerBeltData.timeframes.length) return '';
+
+  const blocksHtml = prayerBeltData.timeframes.map(tf => `
+    <div class="rating-block">
+      <h3 class="rating-block-title">${escapeHtml(tf.timeFrame)} — ${tf.present ? 'Present' : 'Absent'}</h3>
+      ${tf.tribes.length ? tf.tribes.map(t => `
+        <div class="qa-row">
+          <div class="qa-body">
+            <div class="qa-question">${escapeHtml(t.tribeName)}</div>
+            <div class="qa-answer">${escapeHtml(t.attendance || '—')} in attendance</div>
+          </div>
+        </div>
+      `).join('') : `
+        <div class="qa-row">
+          <div class="qa-body">
+            <div class="qa-answer">No tribes recorded for this time frame.</div>
+          </div>
+        </div>
+      `}
+      <div class="qa-row">
+        <div class="qa-body">
+          <div class="qa-question">Total</div>
+          <div class="qa-answer">${escapeHtml(tf.total || '—')}</div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  return `
+    <h2 class="dash-view-title" style="margin-top:24px;">Prayer Belt Report</h2>
+    ${blocksHtml}
+    ${prayerBeltData.prayerRemark ? `<div class="field-hint" style="margin-top:4px;">Remark: ${escapeHtml(prayerBeltData.prayerRemark)}</div>` : ''}
+  `;
+}
+
+function buildHostingBethelSummaryHtml(hostingBethel) {
+  if (!hostingBethel) return '';
+
+  return `
+    <h2 class="dash-view-title" style="margin-top:24px;">Hosting Bethel Report</h2>
+    <div class="rating-block">
+      <div class="qa-row">
+        <div class="qa-body">
+          <div class="qa-question">First Timers (FT)</div>
+          <div class="qa-answer">${escapeHtml(hostingBethel.ft || 0)} / 10</div>
+        </div>
+      </div>
+      <div class="qa-row">
+        <div class="qa-body">
+          <div class="qa-question">Smooth Transition (ST)</div>
+          <div class="qa-answer">${escapeHtml(hostingBethel.st || 0)} / 10</div>
+        </div>
+      </div>
+      <div class="qa-row">
+        <div class="qa-body">
+          <div class="qa-question">Leaders Defence (LD)</div>
+          <div class="qa-answer">${escapeHtml(hostingBethel.ld || 0)} / 10</div>
+        </div>
+      </div>
+      ${hostingBethel.remark ? `
+      <div class="qa-row">
+        <div class="qa-body">
+          <div class="qa-question">Overall Remark</div>
+          <div class="qa-answer">${escapeHtml(hostingBethel.remark)}</div>
+        </div>
+      </div>` : ''}
+    </div>
+  `;
+}
+
+// ---------------------------------------------------------
+// DOWNLOAD SUMMARY AS JPG / PDF — same html2canvas + jsPDF approach as
+// the public Questionnaire's results modal (js-questionnaire.js),
+// captured straight off #rating-summary-capture so the download always
+// matches exactly what's rendered on screen.
+// ---------------------------------------------------------
+function buildRatingSummaryFilename(extension) {
+  const parts = [
+    'SAM-Goals-Rating',
+    reportTitle || 'session',
+    dateInput.value || new Date().toISOString().slice(0, 10)
+  ].filter(Boolean);
+  return parts.join('_').replace(/[^a-zA-Z0-9_-]/g, '') + '.' + extension;
+}
+
+function captureRatingSummaryCanvas() {
+  const el = document.getElementById('rating-summary-capture');
+  return captureWithForcedPrintColors(el, () =>
+    html2canvas(el, { backgroundColor: '#ffffff', scale: 2, useCORS: true })
+  );
+}
+
+async function downloadRatingSummaryAsJpg(btn) {
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Preparing…';
+  try {
+    const canvas = await captureRatingSummaryCanvas();
+    const link = document.createElement('a');
+    link.download = buildRatingSummaryFilename('jpg');
+    link.href = canvas.toDataURL('image/jpeg', 0.95);
+    link.click();
+  } catch (err) {
+    alert('Could not generate the image: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+async function downloadRatingSummaryAsPdf(btn) {
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Preparing…';
+  try {
+    const canvas  = await captureRatingSummaryCanvas();
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+
+    const pageWidth  = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const imgWidth   = pageWidth;
+    const imgHeight  = (canvas.height * imgWidth) / canvas.width;
+
+    let heightLeft = imgHeight;
+    let position   = 0;
+
+    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+    }
+
+    pdf.save(buildRatingSummaryFilename('pdf'));
+  } catch (err) {
+    alert('Could not generate the PDF: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+document.getElementById('rating-download-jpg-btn').addEventListener('click', (e) => downloadRatingSummaryAsJpg(e.currentTarget));
+document.getElementById('rating-download-pdf-btn').addEventListener('click', (e) => downloadRatingSummaryAsPdf(e.currentTarget));
 
 // Reads Part 2 straight from the DOM at submit time (no separate state
 // array was kept for it, since Phase 1/2 only needed local UI behavior).
@@ -894,7 +1115,7 @@ document.getElementById('rating-form').addEventListener('submit', async (e) => {
     submitHint.className   = 'field-hint ok';
     submitBtn.textContent  = originalBtnText;
     clearRatingDraft();
-    showRatingSuccessModal();
+    showRatingSuccessModal(ratingsPayload, prayerBeltData, hostingBethel);
 
   } catch (err) {
     submitHint.textContent = 'Could not save: ' + err.message;

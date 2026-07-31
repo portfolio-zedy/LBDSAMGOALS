@@ -243,7 +243,7 @@ function renderForm(questions) {
         placeholder="Type your answer here…"></textarea>`;
     }
 
-    div.innerHTML = `<label>${q.Question_Text}</label>${inputHtml}`;
+    div.innerHTML = `<label>${q.Question_Text}</label>${inputHtml}<div class="field-hint error is-hidden" data-role="field-error">This question needs an answer before you can submit.</div>`;
     container.appendChild(div);
 
     // Auto-grow textareas
@@ -283,6 +283,12 @@ function renderForm(questions) {
   // input/change events and snapshot the whole form into sessionStorage
   container.addEventListener('input',  () => saveDraft(snapshotForm()));
   container.addEventListener('change', () => saveDraft(snapshotForm()));
+
+  // Clears a field's inline error the moment it's fixed, rather than
+  // leaving a stale "This question needs an answer" message sitting
+  // next to an answer the person just typed in.
+  container.addEventListener('input',  (e) => clearFieldErrorIfValid(e.target));
+  container.addEventListener('change', (e) => clearFieldErrorIfValid(e.target));
 
   // Restore any previously saved draft AFTER the form is fully in the DOM
   restoreDraft(loadDraft());
@@ -444,9 +450,67 @@ document.getElementById('modal-close-btn').addEventListener('click', () => {
 // ---------------------------------------------------------
 // 5. Submit — clear draft on success
 // ---------------------------------------------------------
+// ---------------------------------------------------------
+// INLINE REQUIRED-FIELD VALIDATION
+// The form has novalidate, so nothing stops a submit at the browser
+// level - these are what actually enforce every required field, using
+// the same .field-hint.error styling already used for every other error
+// message in this app rather than the browser's native tooltip.
+// ---------------------------------------------------------
+function fieldIsValid(fieldDiv) {
+  const inputs = fieldDiv.querySelectorAll('input, select, textarea');
+  for (const el of inputs) {
+    if (el.hasAttribute('required') && !el.disabled && !el.checkValidity()) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function setFieldError(fieldDiv, show) {
+  const hint = fieldDiv.querySelector('[data-role="field-error"]');
+  if (hint) hint.classList.toggle('is-hidden', !show);
+}
+
+// Re-checks just the one field the person is currently typing/selecting
+// in, so a fixed answer clears its own error immediately instead of
+// waiting for another full submit attempt.
+function clearFieldErrorIfValid(target) {
+  const fieldDiv = target.closest && target.closest('.field');
+  if (!fieldDiv) return;
+  if (fieldIsValid(fieldDiv)) setFieldError(fieldDiv, false);
+}
+
+// Validates every question field, showing/hiding each one's own inline
+// error hint. Returns the first invalid field (so the caller can scroll
+// to it), or null if the whole form is complete.
+function validateAllFields() {
+  const fields = Array.from(document.querySelectorAll('#dynamic-form-fields .field'));
+  let firstInvalid = null;
+
+  fields.forEach(fieldDiv => {
+    const valid = fieldIsValid(fieldDiv);
+    setFieldError(fieldDiv, !valid);
+    if (!valid && !firstInvalid) firstInvalid = fieldDiv;
+  });
+
+  return firstInvalid;
+}
+
 document.getElementById('questionnaire-form').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const formData = new FormData(e.target);
+
+  const form = e.target;
+
+  const firstInvalidField = validateAllFields();
+  if (firstInvalidField) {
+    firstInvalidField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const firstInput = firstInvalidField.querySelector('input, select, textarea');
+    if (firstInput) firstInput.focus({ preventScroll: true });
+    return;
+  }
+
+  const formData = new FormData(form);
   const answers  = Object.fromEntries(formData.entries());
 
   const payload = {

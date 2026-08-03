@@ -61,6 +61,43 @@
     <div class="auth-switch">
       New juror? <button type="button" class="link-btn" id="show-signup-btn">Create an account</button>
     </div>
+    <div class="auth-switch">
+      <button type="button" class="link-btn" id="show-forgot-password-btn">Forgot Password?</button>
+    </div>
+  </form>
+
+  <form id="forgot-password-form" class="is-hidden" novalidate>
+    <div class="field">
+      <label>Username</label>
+      <input type="text" id="forgot-username" required placeholder="Enter your username">
+    </div>
+
+    <div class="field">
+      <label>New Password</label>
+      <div class="password-wrap">
+        <input type="password" id="forgot-new-password" required placeholder="Enter a new password" minlength="6">
+        <button type="button" class="toggle-password-btn" data-target="forgot-new-password" aria-label="Show password">👁</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Confirm New Password</label>
+      <div class="password-wrap">
+        <input type="password" id="forgot-confirm-password" required placeholder="Re-enter the new password" minlength="6">
+        <button type="button" class="toggle-password-btn" data-target="forgot-confirm-password" aria-label="Show password">👁</button>
+      </div>
+      <div class="field-hint" id="forgot-hint">This request needs admin approval before you can log in with the new password.</div>
+    </div>
+
+    <div class="actions">
+      <div class="action-container">
+        <button type="submit" class="btn btn-primary" id="forgot-submit-btn">Request Password Reset</button>
+      </div>
+    </div>
+
+    <div class="auth-switch">
+      <button type="button" class="link-btn" id="show-login-from-forgot-btn">Back to login</button>
+    </div>
   </form>
 
   <form id="signup-form" class="is-hidden" novalidate>

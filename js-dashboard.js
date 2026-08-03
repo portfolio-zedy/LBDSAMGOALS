@@ -31,7 +31,7 @@ if (welcomeEl) {
 // backend enforces the same gate on getUsers/updateUserStatus, this is
 // just about not showing a card that would immediately 400 for anyone
 // else.
-const canManageUsers = ['CHIEF JUROR', 'VICE JUROR', 'MAP'].indexOf(userRole) !== -1;
+const canManageUsers = ['CHIEF JUROR', 'VICE CHIEF JUROR', 'MAP'].indexOf(userRole) !== -1;
 if (canManageUsers) {
   document.getElementById('menu-authenticate-users').classList.remove('is-hidden');
 }
@@ -316,7 +316,8 @@ function normalizeUser(u) {
     role: u.Role,
     assignedOrgan: u.Assigned_Organ,
     status: u.Status,
-    rowIndex: u._rowIndex
+    rowIndex: u._rowIndex,
+    hasPendingPasswordReset: !!u.hasPendingPasswordReset
   };
 }
 
@@ -366,6 +367,12 @@ function renderUsersList(users) {
       const row = btn.closest('.user-row');
       loadUserSessions(row.dataset.username, row.dataset.fullname);
     });
+  });
+  usersList.querySelectorAll('.user-approve-reset-btn').forEach(btn => {
+    btn.addEventListener('click', () => handlePasswordResetDecision(btn, 'approve'));
+  });
+  usersList.querySelectorAll('.user-reject-reset-btn').forEach(btn => {
+    btn.addEventListener('click', () => handlePasswordResetDecision(btn, 'reject'));
   });
 }
 
@@ -420,6 +427,17 @@ function renderUserRow(u) {
     `;
   }
 
+  // A pending password reset is orthogonal to account approval status -
+  // an already-Active user can still have one waiting, so this renders
+  // as its own row regardless of which statusHtml branch fired above.
+  const passwordResetHtml = u.hasPendingPasswordReset ? `
+    <div class="user-decision-row">
+      <span class="status-badge status-badge--rejected">Password reset requested</span>
+      <button type="button" class="btn-user-approve user-approve-reset-btn">Approve Reset</button>
+      <button type="button" class="btn-user-reject user-reject-reset-btn">Reject Reset</button>
+    </div>
+  ` : '';
+
   return `
     <div class="submission-item user-row" data-username="${escapeHtml(u.username)}" data-fullname="${escapeHtml(u.fullName)}" data-status="${escapeHtml(u.status)}" data-rowindex="${escapeHtml(u.rowIndex)}" style="cursor:default;">
       <div class="user-row-info">
@@ -427,6 +445,7 @@ function renderUserRow(u) {
         <span class="submission-meta">@${escapeHtml(u.username)} · ${escapeHtml(u.role)}</span>
       </div>
       ${statusHtml}
+      ${passwordResetHtml}
     </div>
   `;
 }
@@ -476,8 +495,33 @@ async function handleUserDecision(btn, decision) {
   }
 }
 
+async function handlePasswordResetDecision(btn, decision) {
+  const row = btn.closest('.user-row');
+  const fullName = row.dataset.fullname;
+  const username = row.dataset.username;
+  const rowIndex = Number(row.dataset.rowindex);
+
+  if (decision === 'reject') {
+    if (!confirm(`Reject the password reset request for ${fullName || username}? Their current password stays unchanged.`)) return;
+  }
+
+  const originalLabel = btn.textContent;
+  row.querySelectorAll('button').forEach(b => b.disabled = true);
+  btn.textContent = 'Working…';
+
+  try {
+    const action = decision === 'approve' ? 'approvePasswordReset' : 'rejectPasswordReset';
+    await callBackend(action, { rowIndex });
+    loadUsers();
+  } catch (err) {
+    alert(`Failed to ${decision === 'approve' ? 'approve' : 'reject'} this password reset: ${err.message}`);
+    row.querySelectorAll('button').forEach(b => b.disabled = false);
+    btn.textContent = originalLabel;
+  }
+}
+
 // -----------------------------------------------------------
-// "VIEW RATINGS" — an authorized user (CHIEF JUROR / VICE JUROR / MAP)
+// "VIEW RATINGS" — an authorized user (CHIEF JUROR / VICE CHIEF JUROR / MAP)
 // browsing an active user's own rating sessions, from inside the
 // Authenticate Users list. Same two-level drill-down and read-only
 // rendering as previous-ratings.html's own sessions -> session-detail

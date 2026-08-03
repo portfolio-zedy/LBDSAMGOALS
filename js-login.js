@@ -55,10 +55,11 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
 });
 
 /* ---------------------------------------------------------
-   TOGGLE BETWEEN LOGIN AND SIGNUP
+   TOGGLE BETWEEN LOGIN, SIGNUP, AND FORGOT PASSWORD
 --------------------------------------------------------- */
 const loginForm = document.getElementById('login-form');
 const signupForm = document.getElementById('signup-form');
+const forgotPasswordForm = document.getElementById('forgot-password-form');
 
 document.getElementById('show-signup-btn').addEventListener('click', () => {
   loginForm.classList.add('is-hidden');
@@ -67,6 +68,16 @@ document.getElementById('show-signup-btn').addEventListener('click', () => {
 
 document.getElementById('show-login-btn').addEventListener('click', () => {
   signupForm.classList.add('is-hidden');
+  loginForm.classList.remove('is-hidden');
+});
+
+document.getElementById('show-forgot-password-btn').addEventListener('click', () => {
+  loginForm.classList.add('is-hidden');
+  forgotPasswordForm.classList.remove('is-hidden');
+});
+
+document.getElementById('show-login-from-forgot-btn').addEventListener('click', () => {
+  forgotPasswordForm.classList.add('is-hidden');
   loginForm.classList.remove('is-hidden');
 });
 
@@ -136,6 +147,69 @@ signupForm.addEventListener('submit', async (e) => {
     hint.textContent = err.message;
     hint.className = "field-hint error";
     btn.textContent = "Create Account";
+    btn.disabled = false;
+  }
+});
+
+/* ---------------------------------------------------------
+   FORGOT PASSWORD — submits a pending reset request; the account's
+   actual password is untouched until an admin approves it from
+   Authenticate Users, same trust model as signup.
+--------------------------------------------------------- */
+forgotPasswordForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const username        = document.getElementById('forgot-username').value.trim();
+  const newPassword     = document.getElementById('forgot-new-password').value.trim();
+  const confirmPassword = document.getElementById('forgot-confirm-password').value.trim();
+  const hint = document.getElementById('forgot-hint');
+  const btn  = document.getElementById('forgot-submit-btn');
+
+  if (!username || !newPassword || !confirmPassword) {
+    hint.textContent = "All fields are required.";
+    hint.className = "field-hint error";
+    return;
+  }
+  if (newPassword.length < 6) {
+    hint.textContent = "New password must be at least 6 characters.";
+    hint.className = "field-hint error";
+    return;
+  }
+  if (newPassword !== confirmPassword) {
+    hint.textContent = "Passwords don't match.";
+    hint.className = "field-hint error";
+    return;
+  }
+
+  btn.textContent = "Submitting...";
+  btn.disabled = true;
+  hint.textContent = "Submitting...";
+  hint.className = "field-hint";
+
+  const payload = {
+    action: 'requestPasswordReset',
+    payload: { username, newPassword }
+  };
+
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+
+    const json = await res.json();
+    if (json.code !== 200) throw new Error(json.message);
+
+    hint.textContent = "Request submitted! An admin needs to approve it before you can log in with the new password.";
+    hint.className = "field-hint ok";
+    forgotPasswordForm.reset();
+    btn.textContent = "Request Password Reset";
+    btn.disabled = false;
+
+  } catch (err) {
+    hint.textContent = err.message;
+    hint.className = "field-hint error";
+    btn.textContent = "Request Password Reset";
     btn.disabled = false;
   }
 });

@@ -127,6 +127,14 @@ if (themeToggleBtn) {
       display: none !important;
     }
 
+    /* Points at a specific incomplete/invalid field on submit - outline
+       (not border) so it never shifts layout or fights a field's own
+       border-radius/box-shadow. */
+    .field-invalid-outline {
+      outline: 2px solid var(--danger) !important;
+      outline-offset: 1px;
+    }
+
     /* Download buttons should hug their own text ("Download JPG" /
        "Download PDF"), not stretch to match their sibling primary/
        secondary action buttons in a shared flex row. */

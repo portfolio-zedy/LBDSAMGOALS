@@ -768,6 +768,73 @@ function isRowSamGoalValid(d) {
   return true;
 }
 
+// Part 2 — a time frame marked Absent needs nothing further (that's a
+// complete, legitimate answer on its own). Only once Present is checked
+// does its Total and at least one tribe+attendance become required -
+// this is what actually blocks "checked Present, then walked away
+// without filling in the rest," while still allowing an honest
+// all-Absent report to submit with nothing further needed.
+function isTimeframeBlockValid(block) {
+  const present = block.querySelector('.tf-present-checkbox').checked;
+  if (!present) return true;
+
+  const totalEl = block.querySelector('.tf-total');
+  const totalOk = totalEl && totalEl.value !== '' && !isNaN(Number(totalEl.value)) && Number(totalEl.value) >= 0;
+
+  const tribeRows = Array.from(block.querySelectorAll('.tribe-row'));
+  const hasValidTribe = tribeRows.some(row => {
+    const select = row.querySelector('.tribe-row-select');
+    const attInput = row.querySelector('.tribe-attendance-input');
+    return !!(select && select.value && attInput && attInput.value !== ''
+      && !isNaN(Number(attInput.value)) && Number(attInput.value) >= 0);
+  });
+
+  return !!(totalOk && hasValidTribe);
+}
+
+// Live-clears a time frame's outline/hint the moment it becomes valid -
+// standalone (not closured inside buildTimeframeBlock) so both the
+// per-row listeners and the delegated container-level listener below
+// can both call it with whatever block they have on hand.
+function refreshTimeframeBlockOutline(block) {
+  if (!block) return;
+  const present = block.querySelector('.tf-present-checkbox').checked;
+  if (!present) return;
+
+  const totalEl = block.querySelector('.tf-total');
+  const totalOk = totalEl && totalEl.value !== '' && !isNaN(Number(totalEl.value)) && Number(totalEl.value) >= 0;
+  markInvalid(totalEl, !totalOk);
+
+  const tribeRows = Array.from(block.querySelectorAll('.tribe-row'));
+  const hasValidTribe = tribeRows.some(row => {
+    const select = row.querySelector('.tribe-row-select');
+    const attInput = row.querySelector('.tribe-attendance-input');
+    return !!(select && select.value && attInput && attInput.value !== ''
+      && !isNaN(Number(attInput.value)) && Number(attInput.value) >= 0);
+  });
+
+  if (hasValidTribe) {
+    markInvalid(block.querySelector('.btn-add-tribe'), false);
+    tribeRows.forEach(row => markInvalid(row.querySelector('.tribe-row-select'), false));
+    const tribeHint = block.querySelector('.tribe-hint');
+    if (tribeHint && !tribeHint.textContent.includes('already added')) {
+      tribeHint.textContent = '';
+      tribeHint.className = 'field-hint tribe-hint';
+    }
+  }
+}
+
+// Part 3 — unlike Part 1/Part 2, Hosting Bethel isn't conditional on
+// anything: every session reports all three ratings. Remark stays
+// optional, same as every other remark field in this form.
+function isHostingBethelValid() {
+  const inRange = v => v !== '' && v !== null && v !== undefined && !isNaN(Number(v)) && Number(v) >= 0 && Number(v) <= 10;
+  const ft = document.getElementById('hb-ft-input');
+  const st = document.getElementById('hb-st-input');
+  const ld = document.getElementById('hb-ld-input');
+  return !!(ft && st && ld && inRange(ft.value) && inRange(st.value) && inRange(ld.value));
+}
+
 // Toggles the shared red-outline class (defined once in common.js) on
 // any element - safe to call with a null/missing element (e.g. the
 // "Attach SAM Goal Ref" button, which only exists in the DOM at all
@@ -833,6 +900,59 @@ function validateRatingFormAndHighlight() {
     }
   });
 
+  // Part 2 — Prayer Belt: only Total/tribe fields for time frames marked
+  // Present can ever be invalid (Absent needs nothing further, see
+  // isTimeframeBlockValid).
+  document.querySelectorAll('.timeframe-block').forEach(block => {
+    const totalEl = block.querySelector('.tf-total');
+    const present = block.querySelector('.tf-present-checkbox').checked;
+
+    if (!present) {
+      markInvalid(totalEl, false);
+      return;
+    }
+
+    const totalOk = totalEl && totalEl.value !== '' && !isNaN(Number(totalEl.value)) && Number(totalEl.value) >= 0;
+    markInvalid(totalEl, !totalOk);
+    if (!totalOk) noteInvalid(totalEl);
+
+    const tribeRows = Array.from(block.querySelectorAll('.tribe-row'));
+    const hasValidTribe = tribeRows.some(row => {
+      const select = row.querySelector('.tribe-row-select');
+      const attInput = row.querySelector('.tribe-attendance-input');
+      return !!(select && select.value && attInput && attInput.value !== ''
+        && !isNaN(Number(attInput.value)) && Number(attInput.value) >= 0);
+    });
+
+    // No clean single input to outline when the whole tribe list is the
+    // problem (missing entirely, or every row incomplete) - surface it
+    // as a hint next to the "+ Add Tribe" button instead, same visual
+    // language ('.field-hint.error') used everywhere else in this app.
+    const tribeHint = block.querySelector('.tribe-hint');
+    if (!hasValidTribe) {
+      if (tribeHint) {
+        tribeHint.textContent = 'Add at least one tribe with its attendance for this time frame, since it\'s marked Present.';
+        tribeHint.className = 'field-hint tribe-hint error';
+      }
+      noteInvalid(tribeRows.length ? (tribeRows[0].querySelector('.tribe-row-select')) : block.querySelector('.btn-add-tribe'));
+    } else if (tribeHint && tribeHint.classList.contains('error') && !tribeHint.textContent.includes('already added')) {
+      // Only clear a message THIS check put there - never stomp the
+      // duplicate-tribe warning validateTribeRows() owns.
+      tribeHint.textContent = '';
+      tribeHint.className = 'field-hint tribe-hint';
+    }
+  });
+
+  // Part 3 — Hosting Bethel: always required.
+  const hbInvalid = !isHostingBethelValid();
+  const inRange = v => v !== '' && v !== null && v !== undefined && !isNaN(Number(v)) && Number(v) >= 0 && Number(v) <= 10;
+  ['hb-ft-input', 'hb-st-input', 'hb-ld-input'].forEach(id => {
+    const el = document.getElementById(id);
+    const ok = el && inRange(el.value);
+    markInvalid(el, !ok);
+    if (!ok) noteInvalid(el);
+  });
+
   return firstInvalid;
 }
 
@@ -846,10 +966,14 @@ function checkFormReady() {
     return;
   }
 
-  const allGood = visibleRows.every(r => {
+  const part1Good = visibleRows.every(r => {
     const d = r.data;
     return isRowAttendanceValid(d) && isRowPrehostingValid(d) && isRowSamGoalValid(d);
   });
+
+  const part2Good = Array.from(document.querySelectorAll('.timeframe-block')).every(isTimeframeBlockValid);
+  const part3Good = isHostingBethelValid();
+  const allGood = part1Good && part2Good && part3Good;
 
   // Submit stays clickable even while incomplete - clicking it now runs
   // validateRatingFormAndHighlight() instead of just silently doing
@@ -858,7 +982,7 @@ function checkFormReady() {
   submitBtn.disabled = false;
   submitHint.textContent = allGood
     ? 'All ratings look complete.'
-    : 'Fill in every required field in each rating block to continue.';
+    : 'Fill in every required field across all three parts to continue.';
   submitHint.className = 'field-hint ' + (allGood ? 'ok' : '');
 }
 
@@ -1117,9 +1241,13 @@ document.getElementById('rating-download-pdf-btn').addEventListener('click', (e)
 
 // Reads Part 2 straight from the DOM at submit time (no separate state
 // array was kept for it, since Phase 1/2 only needed local UI behavior).
-// A time frame is only included if it was actually touched - checked
-// Present, given a Total, or given at least one tribe - so leaving
-// Part 2 untouched entirely just omits it, since it's optional.
+// A time frame is only included here if it was actually touched -
+// checked Present, given a Total, or given at least one tribe. Leaving
+// every time frame at its Absent default is still a complete, legitimate
+// report (nothing prayer-related happened that day) and correctly omits
+// them all - but validateRatingFormAndHighlight() now blocks submit if
+// ANY time frame is checked Present without its Total/tribe filled in,
+// so this function only ever runs once that's already guaranteed true.
 function collectPrayerBeltPayload() {
   const remarkEl = document.querySelector('.prayer-remark');
   const prayerRemark = remarkEl ? remarkEl.value.trim() : '';
@@ -1161,7 +1289,7 @@ function collectHostingBethelPayload() {
   const remark = document.getElementById('hb-remark-input').value.trim();
 
   const touched = ft !== '' || st !== '' || ld !== '' || remark !== '';
-  if (!touched) return null; // optional, same as Part 2 — skip entirely if untouched
+  if (!touched) return null; // shouldn't be reachable now that Part 3 is required - validateRatingFormAndHighlight() blocks submit first; kept as a defensive fallback
 
   return { ft, st, ld, remark };
 }
@@ -1272,6 +1400,14 @@ function buildTimeframeBlock(label) {
   // the tribe picker and Total for this time frame entirely.
   checkbox.addEventListener('change', () => {
     body.classList.toggle('is-hidden', !checkbox.checked);
+    if (!checkbox.checked) {
+      // Switching back to Absent means nothing here is required anymore
+      // - clear any leftover red outline/hint from before, rather than
+      // leaving a stale error sitting on now-hidden fields.
+      markInvalid(block.querySelector('.tf-total'), false);
+      if (tribeHint) { tribeHint.textContent = ''; tribeHint.className = 'field-hint tribe-hint'; }
+    }
+    checkFormReady();
     saveRatingDraft();
   });
 
@@ -1336,12 +1472,15 @@ function buildTimeframeBlock(label) {
     row.querySelector('.tribe-row-select').addEventListener('change', () => {
       renderAttendanceField(row);
       validateTribeRows();
+      refreshTimeframeBlockOutline(block);
+      checkFormReady();
       saveRatingDraft();
     });
 
     row.querySelector('.btn-remove-row').addEventListener('click', () => {
       row.remove();
       validateTribeRows();
+      checkFormReady();
       saveRatingDraft();
     });
   }
@@ -1373,9 +1512,19 @@ if (prayerTimeframesContainer) {
 }
 
 // Save draft whenever prayer remark or hosting bethel fields change
-['hb-ft-input', 'hb-st-input', 'hb-ld-input', 'hb-remark-input'].forEach(id => {
+const HB_RATING_IDS = ['hb-ft-input', 'hb-st-input', 'hb-ld-input'];
+HB_RATING_IDS.concat(['hb-remark-input']).forEach(id => {
   const el = document.getElementById(id);
-  if (el) el.addEventListener('input', saveRatingDraft);
+  if (!el) return;
+  el.addEventListener('input', () => {
+    if (HB_RATING_IDS.indexOf(id) !== -1) {
+      const v = el.value;
+      const ok = v !== '' && !isNaN(Number(v)) && Number(v) >= 0 && Number(v) <= 10;
+      markInvalid(el, !ok);
+      checkFormReady();
+    }
+    saveRatingDraft();
+  });
 });
 
 const prayerRemarkEl = document.querySelector('.prayer-remark');
@@ -1386,6 +1535,8 @@ if (prayerTimeframesContainer) {
   prayerTimeframesContainer.addEventListener('input', e => {
     if (e.target.classList.contains('tf-total') ||
         e.target.classList.contains('tribe-attendance-input')) {
+      refreshTimeframeBlockOutline(e.target.closest('.timeframe-block'));
+      checkFormReady();
       saveRatingDraft();
     }
   });

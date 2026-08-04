@@ -491,6 +491,7 @@ function createRatingBlock(row) {
 
   attendanceInput.addEventListener('input', () => {
     row.data.attendance = attendanceInput.value;
+    markInvalid(attendanceInput, !isRowAttendanceValid(row.data));
     checkFormReady();
     saveRatingDraft();
   });
@@ -502,12 +503,14 @@ function createRatingBlock(row) {
 
   prehostingInput.addEventListener('input', () => {
     row.data.prehostingReview = prehostingInput.value;
+    markInvalid(prehostingInput, !isRowPrehostingValid(row.data));
     checkFormReady();
     saveRatingDraft();
   });
 
   samGoalSelect.addEventListener('change', () => {
     row.data.samGoalSubmitted = samGoalSelect.value;
+    markInvalid(samGoalSelect, false); // a real value was just chosen, so this part is answered either way
     if (samGoalSelect.value !== 'Yes') {
       // Leaving "Yes" drops any attached reference so the form never
       // silently submits a stale ref that isn't visible anywhere.
@@ -569,6 +572,9 @@ function renderSamGoalArea(row) {
 
     area.querySelector('.rb-samgoal-rating').addEventListener('input', (e) => {
       row.data.samGoalRating = e.target.value;
+      const val = Number(e.target.value);
+      const ratingOk = e.target.value !== '' && !isNaN(val) && val >= 0 && val <= 10;
+      markInvalid(e.target, !ratingOk);
       checkFormReady();
       saveRatingDraft();
     });
@@ -736,6 +742,100 @@ function validateRows() {
   checkFormReady();
 }
 
+// ---------------------------------------------------------
+// FIELD VALIDITY — single source of truth shared between live-clearing
+// (as someone types/selects) and the submit-time validator, so the two
+// can never disagree about what counts as "filled in."
+// ---------------------------------------------------------
+function isRowAttendanceValid(d) {
+  return d.attendance !== '' && d.attendance !== null && !isNaN(Number(d.attendance)) && Number(d.attendance) >= 0;
+}
+
+function isRowPrehostingValid(d) {
+  if (d.prehostingReview === '' || isNaN(Number(d.prehostingReview))) return false;
+  const pr = Number(d.prehostingReview);
+  return pr >= 0 && pr <= 10;
+}
+
+function isRowSamGoalValid(d) {
+  if (d.samGoalSubmitted !== 'Yes' && d.samGoalSubmitted !== 'No') return false;
+  if (d.samGoalSubmitted === 'Yes') {
+    if (!d.samGoalRef) return false;
+    if (d.samGoalRating === '' || isNaN(Number(d.samGoalRating))) return false;
+    const sr = Number(d.samGoalRating);
+    if (sr < 0 || sr > 10) return false;
+  }
+  return true;
+}
+
+// Toggles the shared red-outline class (defined once in common.js) on
+// any element - safe to call with a null/missing element (e.g. the
+// "Attach SAM Goal Ref" button, which only exists in the DOM at all
+// once a ref hasn't been attached yet).
+function markInvalid(el, invalid) {
+  if (!el) return;
+  el.classList.toggle('field-invalid-outline', !!invalid);
+}
+
+// Runs at submit time: outlines every incomplete/invalid field across
+// the whole form (date, organ/section selection, and each rating
+// block's required fields), returning the first one found in page order
+// so the caller can scroll to and focus it - or null if everything's
+// actually complete.
+function validateRatingFormAndHighlight() {
+  let firstInvalid = null;
+  const noteInvalid = (el) => { if (el && !firstInvalid) firstInvalid = el; };
+
+  markInvalid(dateInput, !dateInput.value);
+  if (!dateInput.value) noteInvalid(dateInput);
+
+  const visibleRows = rows.filter(r => r.blockEl && !r.blockEl.classList.contains('is-hidden'));
+
+  if (!visibleRows.length) {
+    organRowsHint.textContent = 'Select at least one organ and its section to continue.';
+    organRowsHint.className = 'field-hint error';
+    noteInvalid(organRowsContainer);
+  }
+
+  visibleRows.forEach(row => {
+    const block = row.blockEl;
+    const d = row.data;
+
+    const attendanceEl = block.querySelector('.rb-attendance');
+    const attendanceOk = isRowAttendanceValid(d);
+    markInvalid(attendanceEl, !attendanceOk);
+    if (!attendanceOk) noteInvalid(attendanceEl);
+
+    const prehostingEl = block.querySelector('.rb-prehosting');
+    const prehostingOk = isRowPrehostingValid(d);
+    markInvalid(prehostingEl, !prehostingOk);
+    if (!prehostingOk) noteInvalid(prehostingEl);
+
+    const samGoalEl = block.querySelector('.rb-samgoal-submitted');
+    const samGoalAnsweredOk = d.samGoalSubmitted === 'Yes' || d.samGoalSubmitted === 'No';
+    markInvalid(samGoalEl, !samGoalAnsweredOk);
+    if (!samGoalAnsweredOk) noteInvalid(samGoalEl);
+
+    if (d.samGoalSubmitted === 'Yes') {
+      // Only actually present in the DOM while no ref is attached yet -
+      // markInvalid no-ops harmlessly once it's gone.
+      const attachRefBtn = block.querySelector('.rb-attach-ref-btn');
+      const refOk = !!d.samGoalRef;
+      markInvalid(attachRefBtn, !refOk);
+      if (!refOk) noteInvalid(attachRefBtn);
+
+      const samGoalRatingEl = block.querySelector('.rb-samgoal-rating');
+      const ratingOk = samGoalRatingEl
+        ? (d.samGoalRating !== '' && !isNaN(Number(d.samGoalRating)) && Number(d.samGoalRating) >= 0 && Number(d.samGoalRating) <= 10)
+        : true;
+      markInvalid(samGoalRatingEl, !ratingOk);
+      if (!ratingOk) noteInvalid(samGoalRatingEl);
+    }
+  });
+
+  return firstInvalid;
+}
+
 function checkFormReady() {
   const visibleRows = rows.filter(r => r.blockEl && !r.blockEl.classList.contains('is-hidden'));
 
@@ -748,21 +848,14 @@ function checkFormReady() {
 
   const allGood = visibleRows.every(r => {
     const d = r.data;
-    if (d.attendance === '' || d.attendance === null || isNaN(Number(d.attendance)) || Number(d.attendance) < 0) return false;
-    if (d.prehostingReview === '' || isNaN(Number(d.prehostingReview))) return false;
-    const pr = Number(d.prehostingReview);
-    if (pr < 0 || pr > 10) return false;
-    if (d.samGoalSubmitted !== 'Yes' && d.samGoalSubmitted !== 'No') return false;
-    if (d.samGoalSubmitted === 'Yes') {
-      if (!d.samGoalRef) return false;
-      if (d.samGoalRating === '' || isNaN(Number(d.samGoalRating))) return false;
-      const sr = Number(d.samGoalRating);
-      if (sr < 0 || sr > 10) return false;
-    }
-    return true;
+    return isRowAttendanceValid(d) && isRowPrehostingValid(d) && isRowSamGoalValid(d);
   });
 
-  submitBtn.disabled = !allGood;
+  // Submit stays clickable even while incomplete - clicking it now runs
+  // validateRatingFormAndHighlight() instead of just silently doing
+  // nothing, so the person always gets pointed at exactly what's missing
+  // rather than a disabled button with no explanation.
+  submitBtn.disabled = false;
   submitHint.textContent = allGood
     ? 'All ratings look complete.'
     : 'Fill in every required field in each rating block to continue.';
@@ -775,6 +868,7 @@ addOrganBtn.addEventListener('click', addOrganRow);
 // 8. Date picker gates the organ/section builder
 // -----------------------------------------------------------
 dateInput.addEventListener('change', () => {
+  markInvalid(dateInput, false);
   if (dateInput.value) {
     organRowsField.classList.remove('is-hidden');
     if (!rows.length) addOrganRow();
@@ -1076,7 +1170,13 @@ function collectHostingBethelPayload() {
 // non-duplicate) row and saves it via the saveRating action.
 document.getElementById('rating-form').addEventListener('submit', async (e) => {
   e.preventDefault();
-  if (submitBtn.disabled) return;
+
+  const firstInvalid = validateRatingFormAndHighlight();
+  if (firstInvalid) {
+    firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (typeof firstInvalid.focus === 'function') firstInvalid.focus({ preventScroll: true });
+    return;
+  }
 
   const visibleRows = rows.filter(r => r.blockEl && !r.blockEl.classList.contains('is-hidden'));
   const ratingsPayload = visibleRows.map(r => ({
